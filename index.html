@@ -1,0 +1,1981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>MPFBF Inbound Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+:root{--bg:#0d1117;--sur:#161b22;--sur2:#1c2128;--bdr:#30363d;--txt:#e6edf3;--mut:#7d8590;--acc:#f97316;--a2:#3b82f6;--grn:#22c55e;--ylw:#eab308;--red:#ef4444;--tel:#06b6d4;--pur:#a855f7;--r:8px;--f:'Inter',system-ui,sans-serif}
+body.light{--bg:#f0f2f5;--sur:#fff;--sur2:#f6f8fa;--bdr:#d0d7de;--txt:#1f2328;--mut:#656d76}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:var(--f);font-size:13px}
+
+/* HEADER */
+.hdr{background:var(--sur);border-bottom:1px solid var(--bdr);padding:0 18px;display:flex;align-items:center;justify-content:space-between;height:46px;position:sticky;top:0;z-index:300}
+.logo{width:26px;height:26px;background:var(--acc);border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;color:#fff;flex-shrink:0}
+.hdr-l{display:flex;align-items:center;gap:8px}
+.hdr h1{font-size:13px;font-weight:600}
+.hdr-r{display:flex;align-items:center;gap:6px}
+.btn{background:var(--sur2);border:1px solid var(--bdr);color:var(--txt);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:11px;font-family:var(--f)}
+.btn:hover{background:var(--bdr)}.btn-acc{background:var(--acc);border-color:var(--acc);color:#fff}.btn-acc:hover{opacity:.88}
+.btn-red{color:var(--red);border-color:rgba(239,68,68,.35)}.btn-red:hover{background:rgba(239,68,68,.08)}
+.pb{height:2px;background:var(--sur2);position:sticky;top:46px;z-index:299}
+.pb-i{height:2px;background:var(--acc);width:0;transition:width .3s}
+
+/* PUBLISH MODAL */
+.pub-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:600;align-items:center;justify-content:center}
+.pub-modal.show{display:flex}
+.pub-box{background:var(--sur);border:1px solid var(--grn);border-radius:12px;padding:28px 32px;max-width:500px;width:92%;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.pub-box h2{font-size:15px;font-weight:700;color:var(--grn);margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.pub-box p{font-size:12px;color:var(--mut);line-height:1.7;margin-bottom:16px}
+.pub-steps{background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;padding:14px 16px;margin-bottom:18px}
+.pub-steps li{font-size:11px;color:var(--txt);margin-bottom:8px;padding-left:4px;line-height:1.5}
+.pub-steps li:last-child{margin-bottom:0}
+.pub-steps .step-num{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;background:var(--grn);color:#fff;border-radius:50%;font-size:9px;font-weight:700;margin-right:7px;flex-shrink:0}
+.pub-data-summary{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px}
+.pub-ds{background:var(--sur2);border:1px solid var(--bdr);border-radius:7px;padding:8px 10px;text-align:center}
+.pub-ds .pub-dk{font-size:9px;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.pub-ds .pub-dv{font-size:13px;font-weight:700}
+.pub-ds.ok .pub-dv{color:var(--grn)}.pub-ds.warn .pub-dv{color:var(--ylw)}
+.pub-actions{display:flex;gap:8px;justify-content:flex-end}
+.pub-dl-btn{background:var(--grn);border:none;color:#fff;padding:9px 20px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--f);transition:opacity .15s}
+.pub-dl-btn:hover{opacity:.85}
+.pub-dl-btn:disabled{opacity:.4;cursor:not-allowed}
+.pub-status-ok{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);color:var(--grn)}
+.pub-status-err{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:var(--red)}
+.pub-status-info{background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.3);color:var(--a2)}
+
+/* UPLOAD */
+.upbar{background:var(--sur2);border-bottom:1px solid var(--bdr);padding:7px 18px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.cw{display:flex;align-items:center;gap:3px}
+.chip{display:flex;align-items:center;gap:5px;background:var(--sur);border:1px solid var(--bdr);border-radius:20px;padding:3px 12px;font-size:11px;cursor:pointer;position:relative;white-space:nowrap;transition:all .15s}
+.chip:hover:not(.ok):not(.err){border-color:var(--acc)}.chip.ok{border-color:var(--grn);color:var(--grn)}.chip.err{border-color:var(--red);color:var(--red);animation:shk .3s}
+.chip .dot{width:5px;height:5px;border-radius:50%;background:var(--mut);flex-shrink:0}.chip.ok .dot{background:var(--grn)}.chip.err .dot{background:var(--red)}
+.chip input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}.chip.ok input,.chip.err input{pointer-events:none}
+.rb{display:none;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.35);color:var(--red);font-size:10px;cursor:pointer;font-family:var(--f);flex-shrink:0}
+.rb:hover{background:rgba(239,68,68,.2)}.chip.ok~.rb,.chip.err~.rb{display:flex}
+
+/* FILTERS */
+.fbar{background:var(--sur);border-bottom:1px solid var(--bdr);padding:6px 18px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.fg{display:flex;align-items:center;gap:4px}.fg label{font-size:10px;color:var(--mut);white-space:nowrap}
+select,input[type=date],input[type=text]{background:var(--sur2);border:1px solid var(--bdr);color:var(--txt);padding:3px 7px;border-radius:6px;font-size:11px;font-family:var(--f);cursor:pointer}
+select:focus,input:focus{outline:1px solid var(--acc)}
+.fc-badge{display:inline-flex;align-items:center;gap:3px;background:rgba(249,115,22,.1);border:1px solid var(--acc);color:var(--acc);border-radius:10px;padding:1px 7px;font-size:10px}
+
+/* TABS */
+.tabs{background:var(--sur);border-bottom:1px solid var(--bdr);padding:0 18px;display:flex;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{padding:9px 14px;font-size:11px;font-weight:500;color:var(--mut);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;transition:all .15s}
+.tab:hover{color:var(--txt)}.tab.act{color:var(--acc);border-bottom-color:var(--acc)}
+
+/* CONTENT */
+.con{padding:14px 18px;max-width:1800px}
+.pane{display:none}.pane.act{display:block}
+
+/* NUMBER CARDS (KPI) */
+.kg{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:8px;margin-bottom:12px}
+.kc{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:11px 13px;border-left:3px solid var(--acc)}
+.kc.g{border-left-color:var(--grn)}.kc.y{border-left-color:var(--ylw)}.kc.r{border-left-color:var(--red)}.kc.t{border-left-color:var(--tel)}.kc.p{border-left-color:var(--pur)}.kc.b{border-left-color:var(--a2)}
+.kl{font-size:9px;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.kv{font-size:20px;font-weight:700;letter-spacing:-.4px;line-height:1}
+.ks{font-size:9px;color:var(--mut);margin-top:3px}
+.ks2{font-size:10px;color:var(--txt);margin-top:3px;font-weight:500}
+
+/* SECTION HEADER */
+.shr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.shr h2{font-size:12px;font-weight:600}
+.shr .sub{font-size:10px;color:var(--mut)}
+
+/* TABLES */
+.tw{overflow-x:auto;border-radius:var(--r);border:1px solid var(--bdr);margin-bottom:12px}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{background:var(--sur2);padding:6px 9px;text-align:left;font-weight:600;color:var(--mut);font-size:9px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--bdr);position:sticky;top:0;white-space:nowrap;z-index:10}
+th.r{text-align:right}th.c{text-align:center}
+td{padding:5px 9px;border-bottom:1px solid var(--bdr);white-space:nowrap}
+td.r{text-align:right}td.c{text-align:center}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--sur2)}
+tr.total td{background:rgba(234,179,8,.07);font-weight:700;border-top:2px solid var(--ylw)}
+
+/* BADGES */
+.bd{display:inline-block;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:600}
+.bg{background:rgba(34,197,94,.15);color:var(--grn)}.by{background:rgba(234,179,8,.15);color:var(--ylw)}.br{background:rgba(239,68,68,.15);color:var(--red)}
+.bb{background:rgba(59,130,246,.15);color:var(--a2)}.bo{background:rgba(249,115,22,.15);color:var(--acc)}.bp{background:rgba(168,85,247,.15);color:var(--pur)}
+
+/* COLOUR CLASSES */
+.pct-g{color:var(--grn);font-weight:600}.pct-y{color:var(--ylw);font-weight:600}.pct-r{color:var(--red);font-weight:600}
+
+/* SORT */
+th.sortable{cursor:pointer;user-select:none;white-space:nowrap}
+th.sortable:hover{color:var(--txt);background:var(--sur2)!important}
+th.sortable .si{display:inline-block;margin-left:4px;opacity:.35;font-size:9px}
+th.sortable.asc .si::after{content:'▲';opacity:1}
+th.sortable.desc .si::after{content:'▼';opacity:1}
+th.sortable:not(.asc):not(.desc) .si::after{content:'⇅'}
+.sort-bar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px;font-size:11px}
+.sort-chip{display:inline-flex;align-items:center;gap:4px;background:var(--sur2);border:1px solid var(--bdr);border-radius:12px;padding:2px 8px;font-size:10px}
+.sort-chip .dir{cursor:pointer;color:var(--acc);font-weight:700}
+.sort-chip .rm{cursor:pointer;color:var(--mut);margin-left:2px}
+.sort-chip .rm:hover{color:var(--red)}
+
+/* DIVIDER */
+.divider{height:1px;background:var(--bdr);margin:12px 0}
+
+/* EMPTY STATE */
+.emp{text-align:center;padding:50px 20px;color:var(--mut)}
+.emp .ic{font-size:36px;margin-bottom:10px}
+.emp h3{font-size:13px;font-weight:600;margin-bottom:5px;color:var(--txt)}
+.emp p{font-size:11px;line-height:1.6}
+
+/* ERROR MODAL */
+.emo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;align-items:center;justify-content:center}.emo.show{display:flex}
+.emb{background:var(--sur);border:1px solid var(--red);border-radius:10px;padding:22px 26px;max-width:460px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+.emb h2{font-size:13px;font-weight:700;color:var(--red);margin-bottom:7px}
+.emb p{font-size:11px;color:var(--mut);line-height:1.6;margin-bottom:12px}
+.emd{background:var(--sur2);border:1px solid var(--bdr);border-radius:6px;padding:9px 11px;font-size:10px;font-family:monospace;color:var(--txt);max-height:110px;overflow-y:auto;margin-bottom:12px;white-space:pre-wrap;word-break:break-all}
+.ebr{display:flex;gap:7px;justify-content:flex-end}
+
+#toast{position:fixed;bottom:14px;right:14px;background:var(--sur);border:1px solid var(--bdr);border-radius:8px;padding:8px 13px;font-size:11px;z-index:999;display:none;box-shadow:0 4px 16px rgba(0,0,0,.4)}
+#toast.show{display:block}
+@keyframes sp{to{transform:rotate(360deg)}}.spin{display:inline-block;width:10px;height:10px;border:2px solid var(--bdr);border-top-color:var(--acc);border-radius:50%;animation:sp .6s linear infinite;vertical-align:middle;margin-left:3px}
+@keyframes shk{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:2px}
+@media(max-width:860px){.con{padding:10px 10px}}
+</style>
+</head>
+<body>
+
+<!-- ERROR MODAL -->
+<div class="emo" id="emo" onclick="closeEM(event)">
+  <div class="emb">
+    <h2>⛔ Wrong File Uploaded</h2>
+    <p id="em-desc"></p>
+    <div class="emd" id="em-detail"></div>
+    <div class="ebr">
+      <button class="btn" onclick="closeEM()">Dismiss</button>
+      <button class="btn btn-acc" id="em-retry">Try Again</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- PUBLISH MODAL -->
+<div class="pub-modal" id="pub-modal" onclick="closePubModal(event)">
+  <div class="pub-box">
+    <h2>📤 Publish to All Viewers</h2>
+    <p>Data will be pushed directly to your GitHub repo. All viewers will see the updated dashboard within 2 minutes — no manual steps needed.</p>
+
+    <!-- GitHub config — saved in localStorage so admin only enters once -->
+    <div id="gh-config-section">
+      <div class="login-field" style="margin-bottom:10px">
+        <label>GitHub Username</label>
+        <input type="text" id="gh-user" placeholder="e.g. debraj-nath" autocomplete="off">
+      </div>
+      <div class="login-field" style="margin-bottom:10px">
+        <label>Repository Name</label>
+        <input type="text" id="gh-repo" placeholder="e.g. mpfbf-dashboard" autocomplete="off">
+      </div>
+      <div class="login-field" style="margin-bottom:10px">
+        <label>GitHub Personal Access Token
+          <a href="https://github.com/settings/tokens/new?scopes=repo&description=MPFBF+Dashboard" target="_blank" style="color:var(--acc);font-size:10px;margin-left:6px;text-decoration:none">→ Create token</a>
+        </label>
+        <input type="password" id="gh-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off">
+        <div style="font-size:10px;color:var(--mut);margin-top:4px">⚠ Select scope: <strong>repo</strong> (full control). Token is stored only in your browser.</div>
+      </div>
+      <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--mut);margin-bottom:14px;cursor:pointer">
+        <input type="checkbox" id="gh-save" checked style="width:auto"> Remember these settings
+      </label>
+    </div>
+
+    <div class="pub-data-summary" id="pub-summary"></div>
+
+    <div id="pub-status" style="display:none;padding:10px 12px;border-radius:7px;font-size:12px;margin-bottom:12px"></div>
+
+    <div class="pub-actions">
+      <button class="btn" onclick="closePubModal()">Cancel</button>
+      <button class="pub-dl-btn" id="pub-dl-btn" onclick="doPublish()">🚀 Push to GitHub</button>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-l">
+    <div class="logo">FK</div>
+    <h1>MPFBF Inbound Operations Dashboard</h1>
+  </div>
+  <div class="hdr-r">
+    <span id="upd" style="font-size:10px;color:var(--mut)"></span>
+    <button class="btn btn-acc" onclick="go()">↻ Refresh</button>
+    <button class="btn" id="publish-btn" onclick="showPublishModal()" style="background:#22c55e;border-color:#22c55e;color:#fff;font-weight:600">📤 Publish to All</button>
+    <button class="btn" id="thbtn" onclick="toggleTheme()">☀️</button>
+  </div>
+</div>
+<div class="pb"><div class="pb-i" id="pb"></div></div>
+
+<!-- UPLOAD -->
+<div class="upbar">
+  <span style="font-size:10px;color:var(--mut);font-weight:600">UPLOAD →</span>
+  <div class="cw">
+    <label class="chip" id="chip-dmt"><span class="dot"></span><span id="lbl-dmt">DMT.csv</span><input type="file" accept=".csv" id="inp-dmt" onchange="loadCSV('dmt',this)"></label>
+    <button class="rb" id="rb-dmt" onclick="resetFile('dmt')">✕</button>
+  </div>
+  <div class="cw">
+    <label class="chip" id="chip-ib"><span class="dot"></span><span id="lbl-ib">Inbound_Cap.csv</span><input type="file" accept=".csv" id="inp-ib" onchange="loadCSV('ib',this)"></label>
+    <button class="rb" id="rb-ib" onclick="resetFile('ib')">✕</button>
+  </div>
+  <div class="cw">
+    <label class="chip" id="chip-gcp"><span class="dot"></span><span id="lbl-gcp">Consignment_master_report.csv</span><input type="file" accept=".csv" id="inp-gcp" onchange="loadCSV('gcp',this)"></label>
+    <button class="rb" id="rb-gcp" onclick="resetFile('gcp')">✕</button>
+  </div>
+  <button class="btn btn-red" id="reset-all-btn" onclick="resetAll()" style="margin-left:4px">↺ Reset All</button>
+</div>
+
+<!-- GLOBAL FILTERS -->
+<div class="fbar">
+  <div class="fg"><label>📅 From</label><input type="date" id="ff"></div>
+  <div class="fg"><label>To</label><input type="date" id="ft"></div>
+  <div class="fg"><label>🏭 FC</label><select id="ffc"><option value="">All FCs</option></select></div>
+  <div class="fg"><label>📦 Type</label><select id="ftype"><option value="">All Delivery Types</option></select></div>
+  <div class="fg"><label>🚚 Courier</label><select id="fcr"><option value="">All Couriers</option></select></div>
+  <div class="fg"><label>🏷 Category</label><select id="fcat"><option value="">All Categories</option></select></div>
+  <button class="btn btn-acc" onclick="applyFilters()">Apply</button>
+  <button class="btn" onclick="clr()" style="color:var(--mut)">✕ Clear</button>
+  <span id="af"></span>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab act" onclick="sw(0)">📊 Reporting View</div>
+  <div class="tab" onclick="sw(1)">🚛 DMT Analysis</div>
+  <div class="tab" onclick="sw(2)">📈 Inbound Capacity</div>
+  <div class="tab" onclick="sw(3)">🏭 FC Deep Dive</div>
+</div>
+
+<div class="con">
+
+<!-- ═══════════════════════════════════════ TAB 0: REPORTING VIEW -->
+<div class="pane act" id="p0">
+  <div id="e0" class="emp"><div class="ic">📂</div><h3>Upload CSV files to begin</h3><p>Upload DMT.csv and/or Consignment_master_report.csv above.</p></div>
+  <div id="c0" style="display:none">
+    <div class="kg" id="k0"></div>
+    <div class="shr"><h2>FC-wise Reporting Table</h2><span class="sub" id="rv-note"></span></div>
+    <div class="sort-bar" id="rv-sort-bar"></div>
+    <div class="tw" id="rv-wrap"></div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ TAB 1: DMT ANALYSIS -->
+<div class="pane" id="p1">
+  <div id="e1" class="emp"><div class="ic">🚛</div><h3>Upload DMT.csv</h3><p>MPFBF row analysis: TAT, approvals, categories, couriers.</p></div>
+  <div id="c1" style="display:none">
+    <div class="kg" id="k1"></div>
+    <div class="divider"></div>
+
+    <!-- FC × Date timeline table -->
+    <div class="shr"><h2>FC × Date Timeline (Daily Unloaded Qty)</h2><span class="sub" id="dmt-tl-note"></span></div>
+    <div class="sort-bar" id="sb-dmt-tl"></div>
+    <div class="tw" style="max-height:320px;overflow-y:auto" id="dmt-timeline"></div>
+    <div class="divider"></div>
+
+    <!-- Vehicle TAT summary -->
+    <div class="shr"><h2>Vehicle-type TAT Summary (mins)</h2></div>
+    <div class="sort-bar" id="sb-dmt-veh"></div>
+    <div class="tw" id="dmt-veh-tbl"></div>
+    <div class="divider"></div>
+
+    <!-- Courier table -->
+    <div class="shr"><h2>Courier-wise Volume & Approval</h2></div>
+    <div class="sort-bar" id="sb-dmt-cr"></div>
+    <div class="tw" id="dmt-courier-tbl"></div>
+    <div class="divider"></div>
+
+    <!-- Rejection reasons -->
+    <div class="shr"><h2>Top Rejection Reasons</h2></div>
+    <div class="sort-bar" id="sb-dmt-rej"></div>
+    <div class="tw" id="dmt-rej-tbl"></div>
+    <div class="divider"></div>
+
+    <!-- Category table -->
+    <div class="shr"><h2>Category (ippname) — Qty & Approval</h2></div>
+    <div class="sort-bar" id="sb-dmt-cat"></div>
+    <div class="tw" id="dmt-cat-tbl"></div>
+    <div class="divider"></div>
+
+    <!-- Token TAT -->
+    <div class="shr"><h2>Token-wise TAT Detail</h2><span class="sub" id="dmt-tok-note"></span></div>
+    <div class="sort-bar" id="sb-dmt-tok"></div>
+    <div class="tw" style="max-height:380px;overflow-y:auto" id="dmt-tok-tbl"></div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════ TAB 2: INBOUND CAPACITY -->
+<div class="pane" id="p2">
+  <div id="e2ib" class="emp"><div class="ic">📈</div><h3>Upload Inbound_Cap.csv</h3><p>FC-wise capacity: Total, PL Final Cap, Self Cap by date and zone.</p></div>
+  <div id="c2ib" style="display:none">
+    <div class="kg" id="k2ib"></div>
+    <div class="shr"><h2>FC × Zone Capacity Summary</h2><span class="sub" id="ib-note"></span></div>
+    <div class="sort-bar" id="sb-ib-fc"></div>
+    <div class="tw" id="ib-fc-tbl"></div>
+    <div class="divider"></div>
+    <div class="shr"><h2>Daily Capacity — FC × Date Timeline</h2><span class="sub" id="ib-tl-note"></span></div>
+    <div class="sort-bar" id="sb-ib-tl"></div>
+    <div class="tw" style="max-height:360px;overflow-y:auto" id="ib-tl-tbl"></div>
+    <div class="divider"></div>
+    <div class="shr"><h2>Zone-wise Summary</h2></div>
+    <div class="sort-bar" id="sb-ib-zone"></div>
+    <div class="tw" id="ib-zone-tbl"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ TAB 3: FC DEEP DIVE -->
+<div class="pane" id="p3">
+  <!-- Own filter bar -->
+  <div style="background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:10px 14px;margin-bottom:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <div class="fg"><label style="font-weight:600;color:var(--txt)">🏭 FC</label>
+      <select id="ddfc" onchange="buildDDopts()" style="min-width:200px;font-size:11px"><option value="">— select a warehouse —</option></select>
+    </div>
+    <div class="fg"><label>📅 From</label><input type="date" id="dd-from" style="font-size:11px"></div>
+    <div class="fg"><label>To</label><input type="date" id="dd-to" style="font-size:11px"></div>
+    <div class="fg"><label>📅 Week</label><select id="dd-week" style="font-size:11px"><option value="">All Weeks</option></select></div>
+    <div class="fg"><label>🚛 Vehicle Type</label><select id="dd-vtype" style="font-size:11px"><option value="">All Types</option></select></div>
+    <div class="fg"><label>🔢 Vehicle No</label><input type="text" id="dd-vno" placeholder="partial match e.g. HR55" style="font-size:11px;width:130px"></div>
+    <button class="btn btn-acc" onclick="renderDD()">Apply</button>
+    <button class="btn" onclick="clrDD()" style="color:var(--mut)">✕ Clear</button>
+  </div>
+
+  <div id="e3" class="emp"><div class="ic">🏭</div><h3>Select an FC above</h3><p>Inbound view: Scheduling, Reported, Unloaded, GRN, Hold, Reject with truck counts and full TAT breakdown.</p></div>
+  <div id="c3" style="display:none">
+    <!-- Summary KPIs -->
+    <div class="kg" id="k3"></div>
+
+    <!-- SECTION 1: Inbound View (date-wise) -->
+    <div class="divider"></div>
+    <div class="shr"><h2>📋 Daily Inbound View — Scheduling / Reported / Unloaded / GRN / Hold / Reject</h2><span class="sub" id="dd-rv-note"></span></div>
+    <div class="sort-bar" id="sb-dd-rv"></div>
+    <div class="tw" id="dd-rv-tbl"></div>
+
+    <!-- SECTION 2: TAT Summary -->
+    <div class="divider"></div>
+    <div class="shr"><h2>⏱ TAT Summary (mins) — Token to Gate-in, Gate-in to Dock-in, Dock-in to Dock-out, Dock-out to Gate-out</h2></div>
+    <div class="sort-bar" id="sb-dd-tat"></div>
+    <div class="tw" id="dd-tat-sum"></div>
+
+    <!-- SECTION 3: Truck-level table -->
+    <div class="divider"></div>
+    <div class="shr"><h2>🚛 Truck-wise Detail</h2><span class="sub" id="dd-trk-note"></span></div>
+    <div class="sort-bar" id="sb-dd-trk"></div>
+    <div class="tw" style="max-height:400px;overflow-y:auto" id="dd-trk-tbl"></div>
+  </div>
+</div>
+
+</div><!-- con -->
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════
+// STORE & CONSTANTS
+// ═══════════════════════════════════
+const DS = { dmt:[], ib:[], gcp:[] };
+const F = { from:'', to:'', fc:'', type:'', cr:'', cat:'' };
+let curTab = 0;
+
+const DT_TO_PS = {'3PL':'PL','B2B/DI':'PL','Alpha/Diamond':'PL','SELF':'Self','IWIT':'Other'};
+
+const PENDING_ST = new Set(['PICK_UP_REQUESTED','RECEIVED','IN_TRANSIT','DISPATCHED','CREATED',
+  'PICK_UP_READY_TO_DISPATCH','EINVOICE_GENERATION_COMPLETED','BOOKED','EINVOICE_GENERATION_PENDING',
+  'BOOKING_RESCHEDULED','PICK_UP_APPROVED','PICK_UP_ORDER_REGISTERED','WM_ASSIGNED',
+  'PICK_UP_RESCHEDULED','PICK_UP_ORDER_CREATED','PICKUP_IN_PROGRESS','SELLER_APPROVAL_PENDING',
+  'PICK_UP_SELLER_MARKED_RTD','PICK_UP_COMPLETED','REACHED_DESTINATION_HUB','QC_PENDING']);
+
+// ═══════════════════════════════════
+// FC MAPPING — FINAL AUTHORISED LIST
+// ═══════════════════════════════════
+const FC_MAP = [
+  {name:'Sanpka',                  code:'gur_san_wh_nl_01nl'},
+  {name:'Sanpka',                  code:'del_frn_07L'},
+  {name:'Ahmedabad_01 FC',         code:'ahm_khe_wh_nl_01nl'},
+  {name:'Haringhata',              code:'nad_har_wh_kl_nl_01nl'},
+  {name:'Mumbai BTS',              code:'bhi_vas_wh_nl_01nl'},
+  {name:'Uluberia BTS',            code:'ulub_bts'},
+  {name:'Malur BTS',               code:'malur_bts'},
+  {name:'Lucknow FC 02',           code:'luc_has_wh_nl_02nl'},
+  {name:'HYderabad FC Medchal',    code:'hyderabad_medchal_01'},
+  {name:'Jaipur Sanganer NLFC 01', code:'jai_san_wh_nl_01nl'},
+  {name:'Coimbatore FC',           code:'cbe_oth_01'},
+  {name:'Chennai 04 Warehouse',    code:'chn_tvr_04'},
+  {name:'Nagpur',                  code:'nag_wad_wh_nl_02nl'},
+  {name:'guw_kam_wh_nl_02nl',      code:'guw_kam_wh_nl_02nl'},
+  {name:'Siliguri',                code:'jal_bin_wh_nl_01nl'},
+  {name:'Bhuneshwar BTS01',        code:'cut_tan_wh_nl_01nl'},
+  {name:'Indore_02',               code:'ind_teh_wh_nl_01nl'},
+  {name:'Hubli_01',                code:'dha_kot_wh_nl_01nl'},
+  {name:'guw_kam_wh_nl_02nl',      code:'guw_kam_wh_nl_01nl'},  // alternate code for Guwahati
+  {name:'Lucknow FC 02',           code:'luc_has_wh_nl_01nl'},  // alternate code for Lucknow
+];
+const C2N={}, N2C={};
+FC_MAP.forEach(e=>{ C2N[e.code.toLowerCase()]=e.name; C2N[e.name.toLowerCase()]=e.name; if(!N2C[e.name.toLowerCase()]) N2C[e.name.toLowerCase()]=e.code; });
+function fcName(r){ if(!r) return null; const v=r.trim(); const res=C2N[v.toLowerCase()]||null; if(!res && Array.from(FC_MAP).some(e=>e.name===v)) return v; return res; }
+function fcCode(n){ return N2C[(n||'').toLowerCase()]||n; }
+function fcMatch(r){ const nm=fcName(r); if(!nm) return false; if(!F.fc) return true; return nm===F.fc; }
+
+// ═══════════════════════════════════
+// FILE VALIDATION
+// ═══════════════════════════════════
+const REQ={
+  dmt:['facility_name','token_no','token_date','gate_in_time','dock_in_time','dock_out_time','gate_out_time','cstatus','actualqty','ippname','sname','courier_name','delivery_type','vehicle_type'],
+  ib:['Date','Zone','FC','MPFBF Total','MPFBF Self Caps','MPFBF PL Final Cap'],
+  gcp:['consignment_id','seller_id','warehouse_id','status','dispatch_type','super_category','business_unit','Promised_quantity','actual_quantity','GRN Qty','scheduled_drop_date[latest_scheduled_date]']
+};
+const LABELS={dmt:'DMT.csv',ib:'Inbound_Cap.csv',gcp:'Consignment_master_report.csv'};
+function detectKey(cols){ const s=new Set(cols); let best=null,bs=0; for(const[k,r] of Object.entries(REQ)){const sc=r.filter(c=>s.has(c)).length/r.length; if(sc>bs){bs=sc;best=k;}} return bs>=0.6?best:null; }
+
+function showEM(key,fname,missing,det){
+  let d=`"<strong>${fname}</strong>" is not valid for the <strong>${LABELS[key]}</strong> slot.`;
+  if(det&&det!==key) d+=` Looks like <strong>${LABELS[det]}</strong> was uploaded here.`;
+  document.getElementById('em-desc').innerHTML=d;
+  document.getElementById('em-detail').textContent=`Missing (${missing.length}):\n${missing.join('\n')}\n\nNeeded: ${REQ[key].join(', ')}`;
+  document.getElementById('em-retry').onclick=()=>{closeEM();document.getElementById('inp-'+key).click();};
+  document.getElementById('emo').classList.add('show');
+}
+function closeEM(e){ if(e&&e.target!==document.getElementById('emo')) return; document.getElementById('emo').classList.remove('show'); }
+
+// ═══════════════════════════════════
+// RESET
+// ═══════════════════════════════════
+function resetFile(key){
+  DS[key]=[];
+  // Clear stored CSV raw data and invalidate saved aggregate
+  try{ localStorage.removeItem('mpfbf_csv_'+key); localStorage.removeItem('mpfbf_agg'); }catch(e){}
+  document.getElementById('chip-'+key).className='chip';
+  document.getElementById('lbl-'+key).textContent=LABELS[key];
+  const old=document.getElementById('inp-'+key);
+  const ni=document.createElement('input'); ni.type='file'; ni.accept='.csv'; ni.id='inp-'+key;
+  ni.onchange=function(){loadCSV(key,this);}; old.replaceWith(ni);
+  buildOpts(); go(); toast(`${LABELS[key]} removed`);
+}
+function resetAll(){
+  ['dmt','ib','gcp'].forEach(resetFile);
+  try{ localStorage.removeItem('mpfbf_agg'); localStorage.removeItem('mpfbf_agg_labels'); }catch(e){}
+  clr();
+}
+
+// ═══════════════════════════════════
+// LOAD CSV
+// ═══════════════════════════════════
+function loadCSV(key,inp){
+  const file=inp.files[0]; if(!file) return;
+  const chip=document.getElementById('chip-'+key),lbl=document.getElementById('lbl-'+key);
+  chip.className='chip'; lbl.innerHTML=`Loading…<span class="spin"></span>`; setP(15);
+  const rd=new FileReader();
+  rd.onload=e=>{
+    setP(45);
+    const first=e.target.result.split('\n')[0];
+    const headers=first.replace(/\r/g,'').split(',').map(h=>h.trim().replace(/^"|"$/g,''));
+    const missing=REQ[key].filter(c=>!headers.includes(c));
+    if(missing.length>0){ chip.className='chip err'; lbl.textContent=LABELS[key]; setP(0); inp.value=''; showEM(key,file.name,missing,detectKey(headers)); return; }
+    Papa.parse(e.target.result,{header:true,skipEmptyLines:true,dynamicTyping:false,complete:res=>{
+      DS[key]=res.data; chip.className='chip ok';
+      const sn=file.name.length>22?file.name.slice(0,20)+'…':file.name;
+      lbl.textContent=`${sn} ✓ (${res.data.length.toLocaleString()})`;
+      setP(100); setTimeout(()=>setP(0),800);
+      toast(`✓ ${file.name} — ${res.data.length.toLocaleString()} rows`);
+      buildOpts(); go();
+      saveAggToStorage(); // persist data across page reloads
+    },error:()=>{chip.className='chip err';lbl.textContent=LABELS[key];toast('Parse error','err');setP(0);}});
+  }; rd.readAsText(file);
+}
+
+// ═══════════════════════════════════
+// UTILS
+// ═══════════════════════════════════
+function setP(v){document.getElementById('pb').style.width=v+'%';}
+function toast(msg,t='ok'){const el=document.getElementById('toast');el.textContent=msg;el.className='show';el.style.borderLeft=t==='ok'?'3px solid var(--grn)':'3px solid var(--red)';setTimeout(()=>el.className='',3500);}
+function parseDate(v){
+  if(!v||v==='NaT'||v==='NA'||v===''||v==='nan') return null;
+  if(v instanceof Date) return isNaN(v)?null:v;
+  const s=String(v).trim();
+  // Excel serial number
+  const n=parseFloat(s); if(!isNaN(n)&&n>40000&&n<65000) return new Date((n-25569)*86400000);
+  // dd-MMM-yy (Inbound Cap date format: "05-Jul-23")
+  const m=s.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{2,4})$/);
+  if(m){const mon={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};const yr=parseInt(m[3]);const y=yr<100?(yr<50?2000+yr:1900+yr):yr;return new Date(y,mon[m[2]],parseInt(m[1]));}
+  // ISO datetime "YYYY-MM-DD HH:MM:SS" — extract date part directly to avoid
+  // browser timezone issues with non-standard datetime string parsing
+  const isoFull=s.match(/^(\d{4}-\d{2}-\d{2})[T ]/);
+  if(isoFull) return new Date(isoFull[1]+'T00:00:00');
+  // ISO date "YYYY-MM-DD"
+  const isoDate=s.match(/^(\d{4}-\d{2}-\d{2})$/);
+  if(isoDate) return new Date(s+'T00:00:00');
+  return null;
+}
+function fd(d){
+  if(!d) return '';
+  // Use local date components to avoid UTC offset shifting the date
+  const yy=d.getFullYear(), mm=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0');
+  return `${yy}-${mm}-${dd}`;
+}
+function tatMin(a,b){const da=parseDate(a),db=parseDate(b);if(!da||!db)return null;const diff=(db-da)/60000;return(diff>0&&diff<2880)?Math.round(diff):null;}
+function fmt(n,dc=0){if(n===null||n===undefined||(typeof n==='number'&&isNaN(n)))return '—';return Number(n).toLocaleString('en-IN',{maximumFractionDigits:dc});}
+function pct(n,dc=1){if(n===null||n===undefined||isNaN(n)||!isFinite(n))return '—';return(n*100).toFixed(dc)+'%';}
+function pctCls(v){if(v===null||isNaN(v))return '';return v>=.95?'pct-g':v>=.80?'pct-y':'pct-r';}
+function grnCls(v){if(v===null||isNaN(v))return '';return v>=.90?'pct-g':v>=.75?'pct-y':'pct-r';}
+function cTat(m){return !m?'':m<=60?'bg':m<=120?'by':'br';}
+function normStatus(s){if(!s||s==='nan')return 'Unknown';const v=String(s).trim().toLowerCase();if(/^app|^acce/.test(v))return 'Approve';if(/^rej/.test(v))return 'Reject';if(/hold/.test(v))return 'Hold';return String(s).trim();}
+function sum(arr,k){return arr.reduce((a,r)=>a+(parseFloat(r[k])||0),0);}
+function isoWeek(d){const date=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const day=date.getUTCDay()||7;date.setUTCDate(date.getUTCDate()+4-day);const ys=new Date(Date.UTC(date.getUTCFullYear(),0,1));return Math.ceil(((date-ys)/86400000+1)/7);}
+function isoYear(d){const date=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const day=date.getUTCDay()||7;date.setUTCDate(date.getUTCDate()+4-day);return date.getUTCFullYear();}
+function weekLabel(d){return `W${String(isoWeek(d)).padStart(2,'0')}-${isoYear(d)}`;}
+
+// ═══════════════════════════════════
+// BUILD FILTER OPTIONS
+// ═══════════════════════════════════
+function buildOpts(){
+  const fcs=new Set(),types=new Set(),crs=new Set(),cats=new Set();
+  if(DS._agg){
+    // Published mode — populate from aggregated data
+    (DS._agg.rv||[]).forEach(r=>{ if(r.fc) fcs.add(r.fc); });
+    (DS._agg.tokens||[]).forEach(r=>{
+      if(r.dt) types.add(r.dt.trim());
+      if(r.cr) crs.add(r.cr.trim());
+      if(r.cat) cats.add(r.cat.trim());
+    });
+    (DS._agg.couriers||[]).forEach(r=>{ if(r.cr) crs.add(r.cr.trim()); });
+  } else {
+    // Live mode — populate from raw DS
+    DS.dmt.filter(r=>r.sname==='MPFBF').forEach(r=>{
+      const n=fcName(r.facility_name); if(n) fcs.add(n);
+      if(r.delivery_type) types.add(r.delivery_type.trim());
+      if(r.courier_name) crs.add(r.courier_name.trim());
+      if(r.ippname) cats.add(r.ippname.trim());
+    });
+    DS.ib.filter(r=>r.Zone!=='FALSE').forEach(r=>{ const n=fcName(r.FC); if(n) fcs.add(n); });
+    DS.gcp.forEach(r=>{ const n=fcName(r.warehouse_id); if(n) fcs.add(n); });
+  }
+  function pop(id,items,first){const s=document.getElementById(id),cur=s.value;s.innerHTML=`<option value="">${first}</option>`;[...items].sort().forEach(v=>{if(!v)return;const o=document.createElement('option');o.value=v;o.textContent=v;if(v===cur)o.selected=true;s.appendChild(o);});}
+  pop('ffc',fcs,'All FCs'); pop('ftype',types,'All Delivery Types'); pop('fcr',crs,'All Couriers'); pop('fcat',cats,'All Categories');
+  // Deep dive FC selector
+  const s=document.getElementById('ddfc'),cur=s.value;
+  s.innerHTML='<option value="">— select a warehouse —</option>';
+  [...fcs].sort().forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;if(v===cur)o.selected=true;s.appendChild(o);});
+}
+
+// ═══════════════════════════════════
+// FILTER APPLICATION
+// ═══════════════════════════════════
+function applyFilters(){
+  F.from=document.getElementById('ff').value||'';
+  F.to=document.getElementById('ft').value||'';
+  F.fc=document.getElementById('ffc').value||'';
+  F.type=document.getElementById('ftype').value||'';
+  F.cr=document.getElementById('fcr').value||'';
+  F.cat=document.getElementById('fcat').value||'';
+  const ac=Object.values(F).filter(v=>v).length;
+  document.getElementById('af').innerHTML=ac>0?`<span class="fc-badge">🔍 ${ac} filter${ac>1?'s':''}</span>`:'';
+  renderTab();
+}
+function go(){applyFilters();document.getElementById('upd').textContent='Updated '+new Date().toLocaleTimeString();}
+function clr(){['ff','ft','ffc','ftype','fcr','fcat'].forEach(id=>document.getElementById(id).value='');Object.assign(F,{from:'',to:'',fc:'',type:'',cr:'',cat:''});document.getElementById('af').innerHTML='';renderTab();}
+
+// ═══════════════════════════════════
+// FILTERED DATA
+// ═══════════════════════════════════
+function fDMT(){
+  if(DS._agg){
+    // Published mode: filter token rows from aggregated data
+    return (DS._agg.tokens||[]).filter(r=>{
+      if(F.fc && r.fc!==F.fc) return false;
+      if(F.from && r.d && r.d<F.from) return false;
+      if(F.to   && r.d && r.d>F.to)   return false;
+      if(F.type && (r.dt||'').trim()!==F.type) return false;
+      if(F.cr   && (r.cr||'').trim()!==F.cr)   return false;
+      if(F.cat  && (r.cat||'').trim()!==F.cat)  return false;
+      return true;
+    }).map(r=>({  // map back to DMT-like shape for renderDMT compatibility
+      sname:'MPFBF', facility_name:r.fc, token_no:r.tk, token_date:r.d,
+      vehicle_type:r.veh, veh_reg_no:r.vno,
+      gate_in_time:r.gi, dock_in_time:r.di, dock_out_time:r.do_, gate_out_time:r.go,
+      delivery_type:r.dt, courier_name:r.cr, ippname:r.cat,
+      actualqty:r.actQty, invoiceqty:r.invQty,
+      cstatus:r.ap>0?'Approved':'Rejected', hold_reason:r.hd>0?'hold':null,
+      creason:''
+    }));
+  }
+  return DS.dmt.filter(r=>{
+    if(r.sname!=='MPFBF') return false;
+    if(!fcMatch(r.facility_name)) return false;
+    const d=parseDate(r.token_date);
+    if(F.from&&d&&fd(d)<F.from) return false;
+    if(F.to&&d&&fd(d)>F.to) return false;
+    if(F.type&&(r.delivery_type||'').trim()!==F.type) return false;
+    if(F.cr&&(r.courier_name||'').trim()!==F.cr) return false;
+    if(F.cat&&(r.ippname||'').trim()!==F.cat) return false;
+    return true;
+  });
+}
+function fGCP(dateField='scheduled_drop_date[latest_scheduled_date]'){
+  return DS.gcp.filter(r=>{
+    if(!fcMatch(r.warehouse_id)) return false;
+    const d=parseDate(r[dateField]);
+    // If a date filter is active, rows with null/unparseable dates must be excluded
+    if((F.from||F.to)&&!d) return false;
+    if(F.from&&d&&fd(d)<F.from) return false;
+    if(F.to&&d&&fd(d)>F.to) return false;
+    return true;
+  });
+}
+
+// ═══════════════════════════════════
+// FILTERED IB DATA
+// ═══════════════════════════════════
+function fIB(){
+  if(DS._agg){
+    return (DS._agg.ib||[]).filter(r=>{
+      if(F.fc && r.fc!==F.fc) return false;
+      if(F.from && r.d && r.d<F.from) return false;
+      if(F.to   && r.d && r.d>F.to)   return false;
+      return true;
+    }).map(r=>({'Date':r.d,'Zone':r.zone,'FC':r.code,'MPFBF Total':r.capT,'MPFBF PL Final Cap':r.capPL,'MPFBF Self Caps':r.capSelf}));
+  }
+  return DS.ib.filter(r=>{
+    if(r.Zone==='FALSE') return false;
+    if(!fcMatch(r.FC)) return false;
+    const d=parseDate(r.Date);
+    if(F.from&&d&&fd(d)<F.from) return false;
+    if(F.to&&d&&fd(d)>F.to) return false;
+    return true;
+  });
+}
+
+// ═══════════════════════════════════
+// REPORTING VIEW DATA BUILDER
+// ═══════════════════════════════════
+function buildRVData(){
+  // If published/aggregated data is loaded, return pre-computed rows directly
+  if(DS._agg && DS._agg.rv && DS._agg.rv.length){
+    return buildRVDataFromAgg(DS._agg.rv);
+  }
+  // Otherwise compute from raw DS (admin live mode)
+  return buildRVDataFromRaw();
+}
+
+function buildRVDataFromAgg(rvRows){
+  // Filter by global F filters
+  return rvRows.filter(r=>{
+    if(!r.fc) return false;
+    if(F.fc && r.fc!==F.fc) return false;
+    // Exclude rows with no date when date filter is active
+    if((F.from||F.to) && !r.d) return false;
+    if(F.from && r.d && r.d<F.from) return false;
+    if(F.to   && r.d && r.d>F.to)   return false;
+    return true;
+  }).reduce((acc, r)=>{
+    // Merge same FC (sum across dates)
+    let row = acc.find(x=>x.fc===r.fc);
+    if(!row){
+      row={fc:r.fc,code:r.code||fcCode(r.fc),schT:0,schPL:0,schSelf:0,schCons:0,repT:0,repPL:0,repSelf:0,repCons:0,ulT:0,ulPL:0,ulSelf:0,ulCons:0,grnT:0,grnPL:0,grnSelf:0,grnCons:0,holdT:0,holdCons:0,rejT:0,rejCons:0,capT:0,capPL:0,capSelf:0};
+      acc.push(row);
+    }
+    ['capT','capPL','capSelf','schT','schPL','schSelf','schCons','repT','repPL','repSelf','repCons','ulT','ulPL','ulSelf','ulCons','grnT','grnPL','grnSelf','grnCons','holdT','holdCons','rejT','rejCons'].forEach(k=>row[k]+=(r[k]||0));
+    return acc;
+  },[]).sort((a,b)=>b.ulT-a.ulT);
+}
+
+function buildRVDataFromRaw(){
+  // Scheduling : GCP Promised_quantity  by scheduled_drop_date  (PL=PICK_UP / Self=DROP_IN)
+  // Reported   : DMT invoiceqty         by token_date           (PL=B2B/DI+3PL+Alpha/Diamond / Self=SELF)
+  // Unloaded   : DMT actualqty          by token_date           (same PL/Self split)
+  // GRN        : GCP actual_quantity    by received_date        (all received statuses)
+  // Hold       : DMT hold_reason filled
+  // Reject     : DMT cstatus=Reject
+  const dmt=fDMT();
+  const gcpSched=fGCP('scheduled_drop_date[latest_scheduled_date]');
+  const gcpRecv=DS.gcp.filter(r=>{
+    if(!fcMatch(r.warehouse_id)) return false;
+    const d=parseDate(r.received_date);
+    if((F.from||F.to)&&!d) return false;
+    if(F.from&&d&&fd(d)<F.from) return false;
+    if(F.to&&d&&fd(d)>F.to) return false;
+    return true;
+  });
+
+  // Aggregate by FC
+  const m={};
+  function mk(fc){if(!m[fc])m[fc]={fc,code:fcCode(fc),schT:0,schPL:0,schSelf:0,schCons:0,repT:0,repPL:0,repSelf:0,repCons:0,ulT:0,ulPL:0,ulSelf:0,ulCons:0,grnT:0,grnPL:0,grnSelf:0,grnCons:0,holdT:0,holdCons:0,rejT:0,rejCons:0};}
+
+  // Scheduling from GCP by drop_date
+  gcpSched.forEach(r=>{
+    const fc=fcName(r.warehouse_id); if(!fc) return;
+    mk(fc);
+    const q=parseFloat(r.Promised_quantity)||0;
+    m[fc].schT+=q; m[fc].schCons++;
+    if(r.dispatch_type==='PICK_UP'){m[fc].schPL+=q;}else{m[fc].schSelf+=q;}
+  });
+
+  // GRN from GCP by received_date (ALL received statuses: QC_COMPLETED, QC_PENDING, RECEIVED etc.)
+  gcpRecv.forEach(r=>{
+    const fc=fcName(r.warehouse_id); if(!fc) return;
+    mk(fc);
+    const qa=parseFloat(r.actual_quantity)||0;
+    m[fc].grnT+=qa; if(qa>0) m[fc].grnCons++;
+    if(r.dispatch_type==='PICK_UP') m[fc].grnPL+=qa;
+    else m[fc].grnSelf+=qa;
+  });
+
+  // Reported (invoiceqty) + Unloaded (actualqty) + Hold + Reject from DMT
+  dmt.forEach(r=>{
+    const fc=fcName(r.facility_name); if(!fc) return;
+    mk(fc);
+    const iq=parseFloat(r.invoiceqty)||0;
+    const aq=parseFloat(r.actualqty)||0;
+    const ps=DT_TO_PS[r.delivery_type]||'Other';
+    // Reported = invoiceqty
+    m[fc].repT+=iq; m[fc].repCons++;
+    if(ps==='PL') m[fc].repPL+=iq; else if(ps==='Self') m[fc].repSelf+=iq;
+    // Unloaded = actualqty
+    m[fc].ulT+=aq; m[fc].ulCons++;
+    if(ps==='PL') m[fc].ulPL+=aq; else if(ps==='Self') m[fc].ulSelf+=aq;
+    // Hold & Reject
+    const ns=normStatus(r.cstatus);
+    if(r.hold_reason&&r.hold_reason!=='nan'){m[fc].holdT+=aq;m[fc].holdCons++;}
+    if(ns==='Reject'){m[fc].rejT+=aq;m[fc].rejCons++;}
+  });
+
+  return Object.values(m).sort((a,b)=>b.ulT-a.ulT);
+
+}
+
+// ═══════════════════════════════════
+// TAB SWITCH
+// ═══════════════════════════════════
+function sw(n){curTab=n;document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('act',i===n));document.querySelectorAll('.pane').forEach((p,i)=>p.classList.toggle('act',i===n));renderTab();}
+function renderTab(){([renderRV,renderDMT,renderIB,renderDD][curTab])();}
+
+// ═══════════════════════════════════
+// TAB 0 — REPORTING VIEW
+// ═══════════════════════════════════
+function renderRV(){
+  const any=DS._agg||(DS.dmt.length||DS.ib.length||DS.gcp.length);
+  document.getElementById('e0').style.display=any?'none':'';
+  document.getElementById('c0').style.display=any?'':'none';
+  if(!any) return;
+
+  const rv=buildRVData();
+
+  // Merge IB capacity into rv rows (skip in published/agg mode - already merged)
+  if(!DS._agg){
+    const n=v=>parseFloat(String(v||0).replace(/,/g,''))||0;
+    const ibMap={};
+    fIB().forEach(r=>{ const fc=fcName(r.FC); if(!fc) return; if(!ibMap[fc]) ibMap[fc]={capT:0,capPL:0,capSelf:0}; ibMap[fc].capT+=n(r['MPFBF Total']); ibMap[fc].capPL+=n(r['MPFBF PL Final Cap']); ibMap[fc].capSelf+=n(r['MPFBF Self Caps']); });
+    rv.forEach(r=>{ const cap=ibMap[r.fc]||{capT:0,capPL:0,capSelf:0}; r.capT=cap.capT; r.capPL=cap.capPL; r.capSelf=cap.capSelf; });
+    Object.keys(ibMap).forEach(fc=>{ if(!rv.find(r=>r.fc===fc)) rv.push({fc,code:fcCode(fc),schT:0,schPL:0,schSelf:0,schCons:0,repT:0,repPL:0,repSelf:0,repCons:0,ulT:0,ulPL:0,ulSelf:0,ulCons:0,grnT:0,grnPL:0,grnSelf:0,grnCons:0,holdT:0,holdCons:0,rejT:0,rejCons:0,...ibMap[fc]}); });
+  }
+
+  // Totals
+  const T={capT:0,capPL:0,capSelf:0,schT:0,schPL:0,schSelf:0,schCons:0,repT:0,repPL:0,repSelf:0,repCons:0,ulT:0,ulPL:0,ulSelf:0,ulCons:0,grnT:0,grnPL:0,grnSelf:0,grnCons:0,holdT:0,holdCons:0,rejT:0,rejCons:0};
+  rv.forEach(r=>Object.keys(T).forEach(k=>T[k]+=(r[k]||0)));
+
+  const grnPct=T.ulT>0?T.grnT/T.ulT:null;  // GRN% = GRN/Unloaded
+  document.getElementById('k0').innerHTML=`
+    <div class="kc t"><div class="kl">Total Cap</div><div class="kv">${fmt(T.capT)}</div><div class="ks">PL:${fmt(T.capPL)} Self:${fmt(T.capSelf)}</div></div>
+    <div class="kc b"><div class="kl">Scheduled Qty</div><div class="kv">${fmt(T.schT)}</div><div class="ks">${fmt(T.schCons)} cons · PL:${fmt(T.schPL)} Self:${fmt(T.schSelf)}</div></div>
+    <div class="kc"><div class="kl">Reported Qty (Invoice)</div><div class="kv">${fmt(T.repT)}</div><div class="ks">${fmt(T.repCons)} DMT rows</div></div>
+    <div class="kc p"><div class="kl">Unloaded Qty</div><div class="kv">${fmt(T.ulT)}</div><div class="ks">${fmt(T.ulCons)} cons · PL:${fmt(T.ulPL)} Self:${fmt(T.ulSelf)}</div></div>
+    <div class="kc ${grnPct>=.90?'g':grnPct>=.75?'y':'r'}"><div class="kl">GRN Qty</div><div class="kv">${fmt(T.grnT)}</div><div class="ks">GRN% ${pct(grnPct)} · ${fmt(T.grnCons)} received</div></div>
+    <div class="kc y"><div class="kl">Hold Qty</div><div class="kv">${fmt(T.holdT)}</div><div class="ks">${fmt(T.holdCons)} cons</div></div>
+    <div class="kc r"><div class="kl">Rejected Qty</div><div class="kv">${fmt(T.rejT)}</div><div class="ks">${fmt(T.rejCons)} cons · ${pct(T.ulCons?T.rejCons/T.ulCons:null)}</div></div>
+    <div class="kc"><div class="kl">Active FCs</div><div class="kv">${rv.length}</div></div>
+  `;
+
+  document.getElementById('rv-note').textContent=`${rv.length} FCs · ${F.from||'—'} to ${F.to||'—'}`;
+  renderRVTable(rv, T, 'rv-wrap', 'rv-sort-bar');
+}
+
+function renderRVTable(rv, T, tblId, barId){
+  function utilCls(v){if(!v||isNaN(v))return'';return v>=1.0?'pct-r':v>=.85?'pct-y':'pct-g';}
+  function grnCls2(v){if(!v||isNaN(v))return'';return v>=.90?'pct-g':v>=.75?'pct-y':'pct-r';}
+  function rjCls(v){if(!v||isNaN(v))return'';return v>.1?'pct-r':v>.05?'pct-y':'pct-g';}
+
+  const cols=[
+    {k:'fc',        label:'FC',           grp:'',       fmt_:r=>r.fc,                  num:false},
+    {k:'code',      label:'FC Code',      grp:'',       fmt_:r=>r.code,                num:false},
+    {k:'capT',      label:'Total Cap',    grp:'cap',    fmt_:r=>fmt(r.capT),           num:true},
+    {k:'capPL',     label:'PL Cap',       grp:'cap',    fmt_:r=>fmt(r.capPL),          num:true},
+    {k:'capSelf',   label:'Self Cap',     grp:'cap',    fmt_:r=>r.capSelf>0?fmt(r.capSelf):'—', num:true},
+    {k:'schT',      label:'Total Qty',    grp:'sch',    fmt_:r=>fmt(r.schT),           num:true},
+    {k:'schPL',     label:'PL',           grp:'sch',    fmt_:r=>fmt(r.schPL),          num:true},
+    {k:'schSelf',   label:'Self',         grp:'sch',    fmt_:r=>r.schSelf>0?fmt(r.schSelf):'—', num:true},
+    {k:'schPct',    label:'Sched %',      grp:'sch',    fmt_:r=>`<span class="${utilCls(r.capT>0?r.schT/r.capT:null)}">${pct(r.capT>0?r.schT/r.capT:null)}</span>`, num:true, val:r=>r.capT>0?r.schT/r.capT:0},
+    {k:'repT',      label:'Total Qty',    grp:'rep',    fmt_:r=>fmt(r.repT),           num:true},
+    {k:'repPL',     label:'PL',           grp:'rep',    fmt_:r=>fmt(r.repPL),          num:true},
+    {k:'repSelf',   label:'Self',         grp:'rep',    fmt_:r=>r.repSelf>0?fmt(r.repSelf):'—', num:true},
+    {k:'ulT',       label:'Total Qty',    grp:'ul',     fmt_:r=>fmt(r.ulT),            num:true},
+    {k:'ulPL',      label:'PL',           grp:'ul',     fmt_:r=>fmt(r.ulPL),           num:true},
+    {k:'ulSelf',    label:'Self',         grp:'ul',     fmt_:r=>r.ulSelf>0?fmt(r.ulSelf):'—', num:true},
+    {k:'ulCons',    label:'Cons Rows',    grp:'ul',     fmt_:r=>fmt(r.ulCons),         num:true},
+    {k:'ulPct',     label:'Util %',       grp:'ul',     fmt_:r=>`<span class="${utilCls(r.capT>0?r.ulT/r.capT:null)}">${pct(r.capT>0?r.ulT/r.capT:null)}</span>`, num:true, val:r=>r.capT>0?r.ulT/r.capT:0},
+    {k:'grnT',      label:'Total Qty',    grp:'grn',    fmt_:r=>fmt(r.grnT),           num:true},
+    {k:'grnPL',     label:'PL',           grp:'grn',    fmt_:r=>fmt(r.grnPL),          num:true},
+    {k:'grnSelf',   label:'Self',         grp:'grn',    fmt_:r=>r.grnSelf>0?fmt(r.grnSelf):'—', num:true},
+    {k:'grnPct',    label:'GRN %',        grp:'grn',    fmt_:r=>`<span class="${grnCls2(r.ulT>0?r.grnT/r.ulT:null)}">${pct(r.ulT>0?r.grnT/r.ulT:null)}</span>`, num:true, val:r=>r.ulT>0?r.grnT/r.ulT:0},
+    {k:'holdT',     label:'Qty',          grp:'hold',   fmt_:r=>r.holdT>0?fmt(r.holdT):'—',  num:true},
+    {k:'holdCons',  label:'Cons',         grp:'hold',   fmt_:r=>r.holdCons>0?fmt(r.holdCons):'—', num:true},
+    {k:'rejT',      label:'Qty',          grp:'rej',    fmt_:r=>r.rejT>0?fmt(r.rejT):'—',    num:true},
+    {k:'rejCons',   label:'Cons',         grp:'rej',    fmt_:r=>r.rejCons>0?fmt(r.rejCons):'—', num:true},
+    {k:'rejPct',    label:'Rej %',        grp:'rej',    fmt_:r=>`<span class="${rjCls(r.ulCons>0?r.rejCons/r.ulCons:null)}">${pct(r.ulCons>0?r.rejCons/r.ulCons:null)}</span>`, num:true, val:r=>r.ulCons>0?r.rejCons/r.ulCons:0},
+  ];
+
+  const grpMeta={
+    cap: {label:'Capacity Allocated', bg:'rgba(6,182,212,.08)', co:'var(--tel)', span:3},
+    sch: {label:'Scheduling',         bg:'rgba(59,130,246,.08)',  co:'var(--a2)',  span:4},
+    rep: {label:'Reported',           bg:'',                     co:'',           span:3},
+    ul:  {label:'Unloaded',           bg:'rgba(168,85,247,.08)', co:'var(--pur)', span:5},
+    grn: {label:'GRN',                bg:'rgba(34,197,94,.08)',  co:'var(--grn)', span:4},
+    hold:{label:'Hold',               bg:'rgba(234,179,8,.08)',  co:'var(--ylw)', span:2},
+    rej: {label:'Reject',             bg:'rgba(239,68,68,.08)',  co:'var(--red)', span:3},
+  };
+
+  // Sort state per table
+  if(!window._sortState) window._sortState={};
+  if(!window._sortState[tblId]) window._sortState[tblId]=[];
+  const sortState=window._sortState[tblId];
+
+  function getVal(r,col){
+    if(col.val) return col.val(r);
+    const v=r[col.k]; if(v===undefined||v===null||v==='—') return col.num?-Infinity:'';
+    return typeof v==='string'&&col.num?parseFloat(v.replace(/,/g,''))||0:v;
+  }
+
+  function applySorts(data){
+    if(!sortState.length) return data;
+    return [...data].sort((a,b)=>{
+      for(const s of sortState){
+        const col=cols.find(c=>c.k===s.k);
+        if(!col) continue;
+        const va=getVal(a,col), vb=getVal(b,col);
+        const cmp=typeof va==='string'?va.localeCompare(vb):va-vb;
+        if(cmp!==0) return s.dir==='asc'?cmp:-cmp;
+      }
+      return 0;
+    });
+  }
+
+  function toggleSort(k){
+    const idx=sortState.findIndex(s=>s.k===k);
+    if(idx===-1){ sortState.push({k,dir:'desc'}); }
+    else if(sortState[idx].dir==='desc'){ sortState[idx].dir='asc'; }
+    else { sortState.splice(idx,1); }
+    renderRVTable(rv,T,tblId,barId);
+  }
+  function clearSorts(){ window._sortState[tblId]=[]; renderRVTable(rv,T,tblId,barId); }
+
+  // Sort bar HTML
+  const barEl=document.getElementById(barId);
+  if(barEl){
+    if(!sortState.length){ barEl.innerHTML='<span style="font-size:10px;color:var(--mut)">Click any column header to sort · Shift+click to add secondary sort</span>'; }
+    else{ barEl.innerHTML='<span style="font-size:10px;color:var(--mut)">Sorted by:</span> '
+      +sortState.map((s,i)=>{
+        const col=cols.find(c=>c.k===s.k);
+        return `<span class="sort-chip">${i+1}. ${col?col.label:s.k} <span class="dir" onclick="(function(){window._sortState['${tblId}'][${i}].dir=window._sortState['${tblId}'][${i}].dir==='asc'?'desc':'asc';renderRVTable(window._rvData,window._rvT,'${tblId}','${barId}');})()">${s.dir==='asc'?'▲':'▼'}</span><span class="rm" onclick="(function(){window._sortState['${tblId}'].splice(${i},1);renderRVTable(window._rvData,window._rvT,'${tblId}','${barId}');})()">✕</span></span>`;
+      }).join('')
+      +` <button class="btn" style="font-size:10px;padding:1px 7px" onclick="clearSorts()">Clear All</button>`;
+    }
+  }
+  window._rvData=rv; window._rvT=T;
+
+  const sorted=applySorts(rv);
+
+  // Build th click handler
+  function thClick(k){ return `onclick="(function(e){if(!window._sortState)window._sortState={};if(!window._sortState['${tblId}'])window._sortState['${tblId}']=[];const idx=window._sortState['${tblId}'].findIndex(s=>s.k==='${k}');if(e.shiftKey){if(idx===-1)window._sortState['${tblId}'].push({k:'${k}',dir:'desc'});else if(window._sortState['${tblId}'][idx].dir==='desc')window._sortState['${tblId}'][idx].dir='asc';else window._sortState['${tblId}'].splice(idx,1);}else{const was=idx>-1?window._sortState['${tblId}'][idx].dir:null;window._sortState['${tblId}']=[]; if(was!=='desc')window._sortState['${tblId}'].push({k:'${k}',dir:'desc'});else window._sortState['${tblId}'].push({k:'${k}',dir:'asc'});}renderRVTable(window._rvData,window._rvT,'${tblId}','${barId}');})(event)"`; }
+  function sortCls(k){ const s=sortState.find(x=>x.k===k); return s?s.dir:''; }
+  function sortNum(k){ const idx=sortState.findIndex(x=>x.k===k); return idx>-1?`<sup style="font-size:8px;color:var(--acc)">${idx+1}</sup>`:''; }
+
+  // Totals row helper
+  const totCells=[
+    fmt(T.capT), fmt(T.capPL), T.capSelf>0?fmt(T.capSelf):'—',
+    fmt(T.schT), fmt(T.schPL), T.schSelf>0?fmt(T.schSelf):'—',
+    `<span class="${utilCls(T.capT>0?T.schT/T.capT:null)}">${pct(T.capT>0?T.schT/T.capT:null)}</span>`,
+    fmt(T.repT), fmt(T.repPL), T.repSelf>0?fmt(T.repSelf):'—',
+    fmt(T.ulT), fmt(T.ulPL), T.ulSelf>0?fmt(T.ulSelf):'—', fmt(T.ulCons),
+    `<span class="${utilCls(T.capT>0?T.ulT/T.capT:null)}">${pct(T.capT>0?T.ulT/T.capT:null)}</span>`,
+    fmt(T.grnT), fmt(T.grnPL), T.grnSelf>0?fmt(T.grnSelf):'—',
+    `<span class="${grnCls2(T.ulT>0?T.grnT/T.ulT:null)}">${pct(T.ulT>0?T.grnT/T.ulT:null)}</span>`,
+    fmt(T.holdT), fmt(T.holdCons),
+    fmt(T.rejT), fmt(T.rejCons),
+    `<span class="${rjCls(T.ulCons>0?T.rejCons/T.ulCons:null)}">${pct(T.ulCons>0?T.rejCons/T.ulCons:null)}</span>`,
+  ];
+
+  const dataCols=cols.slice(2); // skip fc, code
+
+  document.getElementById(tblId).innerHTML=`
+  <table id="${tblId}-table">
+    <thead>
+      <tr>
+        <th rowspan="2" class="sortable ${sortCls('fc')}" ${thClick('fc')}>FC <span class="si"></span>${sortNum('fc')}</th>
+        <th rowspan="2" class="sortable ${sortCls('code')}" ${thClick('code')}>FC Code <span class="si"></span>${sortNum('code')}</th>
+        ${Object.entries(grpMeta).map(([g,m])=>`<th colspan="${m.span}" style="text-align:center;background:${m.bg};color:${m.co}">${m.label}</th>`).join('')}
+      </tr>
+      <tr>
+        ${dataCols.map(c=>`<th class="r sortable ${sortCls(c.k)}" style="${c.grp&&grpMeta[c.grp]?'background:'+grpMeta[c.grp].bg.replace('.08','.04'):''};" ${thClick(c.k)}>${c.label} <span class="si"></span>${sortNum(c.k)}</th>`).join('')}
+      </tr>
+    </thead>
+    <tbody>
+    ${sorted.map(r=>`<tr>
+      <td><strong>${r.fc}</strong></td>
+      <td style="font-size:9px;color:var(--mut);font-family:monospace">${r.code}</td>
+      ${dataCols.map(c=>`<td class="r">${c.fmt_(r)}</td>`).join('')}
+    </tr>`).join('')}
+    <tr class="total">
+      <td colspan="2"><strong>TOTAL</strong></td>
+      ${totCells.map(v=>`<td class="r">${v}</td>`).join('')}
+    </tr>
+    </tbody>
+  </table>`;
+}
+
+// renderCapTable removed — capacity merged into renderRV
+
+// ═══════════════════════════════════
+// TAB 1 — DMT ANALYSIS
+// ═══════════════════════════════════
+function renderDMT(){
+  const dmt=fDMT();
+  const dmtAny = DS._agg ? (DS._agg.tokens && DS._agg.tokens.length) : dmt.length;
+  document.getElementById('e1').style.display=dmtAny?'none':'';
+  document.getElementById('c1').style.display=dmtAny?'':'none';
+  if(!dmtAny) return;
+
+  const tats=dmt.map(r=>tatMin(r.dock_in_time,r.dock_out_time)).filter(v=>v!==null);
+  const avgTat=tats.length?Math.round(tats.reduce((a,b)=>a+b,0)/tats.length):null;
+  const ap=dmt.filter(r=>normStatus(r.cstatus)==='Approve').length;
+  const rj=dmt.filter(r=>normStatus(r.cstatus)==='Reject').length;
+  const hd=dmt.filter(r=>normStatus(r.cstatus)==='Hold').length;
+  const totQty=sum(dmt,'actualqty');
+  const tokens=new Set(dmt.map(r=>r.token_no)).size;
+
+  document.getElementById('k1').innerHTML=`
+    <div class="kc p"><div class="kl">Unloaded Qty (MPFBF)</div><div class="kv">${fmt(totQty)}</div><div class="ks">${fmt(dmt.length)} cons rows · ${fmt(tokens)} trucks</div></div>
+    <div class="kc ${avgTat<=60?'g':avgTat<=120?'y':'r'}"><div class="kl">Avg Unload TAT</div><div class="kv">${avgTat??'—'} min</div><div class="ks">dock-in → dock-out</div></div>
+    <div class="kc g"><div class="kl">Approved</div><div class="kv">${fmt(ap)}</div><div class="ks">${pct(dmt.length?ap/dmt.length:null)}</div></div>
+    <div class="kc r"><div class="kl">Rejected</div><div class="kv">${fmt(rj)}</div><div class="ks">${pct(dmt.length?rj/dmt.length:null)}</div></div>
+    <div class="kc y"><div class="kl">Hold</div><div class="kv">${fmt(hd)}</div><div class="ks">${pct(dmt.length?hd/dmt.length:null)}</div></div>
+    <div class="kc"><div class="kl">Unique FCs</div><div class="kv">${new Set(dmt.map(r=>fcName(r.facility_name))).size}</div></div>
+  `;
+
+  // FC × Date Timeline table
+  const fcSet=new Set(), dateSet=new Set();
+  const fcDate={};
+  dmt.forEach(r=>{
+    const fc=fcName(r.facility_name); if(!fc) return;
+    const d=parseDate(r.token_date); if(!d) return;
+    const dk=fd(d);
+    fcSet.add(fc); dateSet.add(dk);
+    const k=fc+'|'+dk;
+    if(!fcDate[k]) fcDate[k]={qty:0,cons:0,trucks:new Set()};
+    fcDate[k].qty+=parseFloat(r.actualqty)||0;
+    fcDate[k].cons++;
+    fcDate[k].trucks.add(r.token_no);
+  });
+  const fcs=[...fcSet].sort(), dates=[...dateSet].sort();
+  document.getElementById('dmt-tl-note').textContent=`${fcs.length} FCs × ${dates.length} dates`;
+  document.getElementById('dmt-timeline').innerHTML=`
+  <table>
+    <thead><tr><th>FC</th>${dates.map(d=>`<th class="r">${d.slice(5)}</th>`).join('')}<th class="r">Total Qty</th><th class="r">Trucks</th></tr></thead>
+    <tbody>${fcs.map(fc=>{
+      let totalQty=0, totalTrucks=new Set();
+      const cells=dates.map(d=>{
+        const v=fcDate[fc+'|'+d];
+        if(v){totalQty+=v.qty;v.trucks.forEach(t=>totalTrucks.add(t));}
+        return v?`<td class="r">${fmt(v.qty)}<br><span style="font-size:9px;color:var(--mut)">${v.trucks.size}t</span></td>`:'<td class="r" style="color:var(--bdr)">—</td>';
+      }).join('');
+      return `<tr><td><strong>${fc}</strong></td>${cells}<td class="r"><strong>${fmt(totalQty)}</strong></td><td class="r">${totalTrucks.size}</td></tr>`;
+  attachSort('dmt-timeline', 'sb-dmt-tl');
+    }).join('')}
+    <tr class="total"><td>TOTAL</td>${dates.map(d=>{
+      let q=0,t=new Set();
+      fcs.forEach(fc=>{const v=fcDate[fc+'|'+d];if(v){q+=v.qty;v.trucks.forEach(x=>t.add(x));}});
+      return `<td class="r">${fmt(q)}<br><span style="font-size:9px">${t.size}t</span></td>`;
+    }).join('')}<td class="r"><strong>${fmt(totQty)}</strong></td><td class="r">${tokens}</td></tr>
+    </tbody>
+  </table>`;
+
+  // Vehicle TAT
+  const bV={};
+  dmt.forEach(r=>{const k=(r.vehicle_type||'?').trim();if(!bV[k])bV[k]={g2d:[],ul:[],d2g:[],e2e:[],cnt:0,qty:0};bV[k].cnt++;bV[k].qty+=parseFloat(r.actualqty)||0;const t1=tatMin(r.gate_in_time,r.dock_in_time),t2=tatMin(r.dock_in_time,r.dock_out_time),t3=tatMin(r.dock_out_time,r.gate_out_time),t4=tatMin(r.gate_in_time,r.gate_out_time);if(t1!==null)bV[k].g2d.push(t1);if(t2!==null)bV[k].ul.push(t2);if(t3!==null)bV[k].d2g.push(t3);if(t4!==null)bV[k].e2e.push(t4);});
+  const avga=a=>a.length?Math.round(a.reduce((x,y)=>x+y,0)/a.length):null;
+  const vD=Object.entries(bV).map(([k,v])=>({k,cnt:v.cnt,qty:v.qty,g2d:avga(v.g2d),ul:avga(v.ul),d2g:avga(v.d2g),e2e:avga(v.e2e)})).sort((a,b)=>b.cnt-a.cnt);
+  document.getElementById('dmt-veh-tbl').innerHTML=`<table><thead><tr><th>Vehicle Type</th><th class="r">Trucks</th><th class="r">Cons Rows</th><th class="r">Qty</th><th class="r">Gate→Dock (avg)</th><th class="r">Unload TAT (avg)</th><th class="r">Dock→Gate (avg)</th><th class="r">E2E TAT (avg)</th></tr></thead><tbody>
+  ${vD.map(r=>`<tr><td>${r.k}</td><td class="r">${fmt(r.cnt)}</td><td class="r">—</td><td class="r">${fmt(r.qty)}</td><td class="r"><span class="bd ${cTat(r.g2d)}">${r.g2d??'—'}m</span></td><td class="r"><span class="bd ${cTat(r.ul)}">${r.ul??'—'}m</span></td><td class="r"><span class="bd ${cTat(r.d2g)}">${r.d2g??'—'}m</span></td><td class="r"><span class="bd ${cTat(r.e2e)}">${r.e2e??'—'}m</span></td></tr>`).join('')}
+  </tbody></table>`;
+  attachSort('dmt-veh-tbl', 'sb-dmt-veh');
+
+  // Courier table
+  const bCr={};
+  dmt.forEach(r=>{const k=(r.courier_name||'?').trim();if(!bCr[k])bCr[k]={qty:0,ap:0,rj:0,hd:0};bCr[k].qty+=parseFloat(r.actualqty)||0;const ns=normStatus(r.cstatus);if(ns==='Approve')bCr[k].ap++;else if(ns==='Reject')bCr[k].rj++;else if(ns==='Hold')bCr[k].hd++;});
+  const crD=Object.entries(bCr).map(([k,v])=>({k,...v,tot:v.ap+v.rj+v.hd})).sort((a,b)=>b.qty-a.qty);
+  document.getElementById('dmt-courier-tbl').innerHTML=`<table><thead><tr><th>Courier</th><th class="r">Total Qty</th><th class="r">Cons Rows</th><th class="r">Approved</th><th class="r">Rejected</th><th class="r">Hold</th><th class="r">Approval %</th></tr></thead><tbody>
+  ${crD.map(r=>`<tr><td>${r.k}</td><td class="r">${fmt(r.qty)}</td><td class="r">${fmt(r.tot)}</td><td class="r">${fmt(r.ap)}</td><td class="r">${fmt(r.rj)}</td><td class="r">${fmt(r.hd)}</td><td class="r ${pctCls(r.tot?r.ap/r.tot:null)}">${pct(r.tot?r.ap/r.tot:null)}</td></tr>`).join('')}
+  </tbody></table>`;
+  attachSort('dmt-courier-tbl', 'sb-dmt-cr');
+
+  // Rejection reasons
+  const bRej={};
+  dmt.filter(r=>normStatus(r.cstatus)==='Reject').forEach(r=>{const k=(r.creason||'(blank)').trim();if(!bRej[k])bRej[k]={cnt:0,qty:0};bRej[k].cnt++;bRej[k].qty+=parseFloat(r.actualqty)||0;});
+  const rejD=Object.entries(bRej).filter(([k])=>k&&k!=='nan').map(([k,v])=>({k,...v})).sort((a,b)=>b.qty-a.qty).slice(0,15);
+  document.getElementById('dmt-rej-tbl').innerHTML=`<table><thead><tr><th>Rejection Reason</th><th class="r">Cons Count</th><th class="r">Qty</th></tr></thead><tbody>
+  ${rejD.map(r=>`<tr><td>${r.k}</td><td class="r">${fmt(r.cnt)}</td><td class="r">${fmt(r.qty)}</td></tr>`).join('')}
+  </tbody></table>`;
+  attachSort('dmt-rej-tbl', 'sb-dmt-rej');
+
+  // Category table
+  const bCat={};
+  dmt.forEach(r=>{const k=(r.ippname||'?').trim();if(!bCat[k])bCat[k]={qty:0,ap:0,rj:0,hd:0};bCat[k].qty+=parseFloat(r.actualqty)||0;const ns=normStatus(r.cstatus);if(ns==='Approve')bCat[k].ap++;else if(ns==='Reject')bCat[k].rj++;else if(ns==='Hold')bCat[k].hd++;});
+  const catD=Object.entries(bCat).map(([k,v])=>({k,...v,tot:v.ap+v.rj+v.hd})).sort((a,b)=>b.qty-a.qty);
+  document.getElementById('dmt-cat-tbl').innerHTML=`<table><thead><tr><th>Category</th><th class="r">Total Qty</th><th class="r">Cons Rows</th><th class="r">Approved</th><th class="r">Rejected</th><th class="r">Approval %</th></tr></thead><tbody>
+  ${catD.map(r=>`<tr><td>${r.k}</td><td class="r">${fmt(r.qty)}</td><td class="r">${fmt(r.tot)}</td><td class="r">${fmt(r.ap)}</td><td class="r">${fmt(r.rj)}</td><td class="r ${pctCls(r.tot?r.ap/r.tot:null)}">${pct(r.tot?r.ap/r.tot:null)}</td></tr>`).join('')}
+  </tbody></table>`;
+  attachSort('dmt-cat-tbl', 'sb-dmt-cat');
+
+  // Token TAT table
+  const tkMap={};
+  dmt.forEach(r=>{const tk=r.token_no||'?';if(!tkMap[tk])tkMap[tk]={tk,fc:fcName(r.facility_name||'')||'',veh:(r.vehicle_type||'').trim(),vno:(r.veh_reg_no||'').trim(),dt:'',gi:r.gate_in_time,di:r.dock_in_time,do_:r.dock_out_time,go:r.gate_out_time,qty:0,cons:0,ap:0,rj:0,hd:0};const d=parseDate(r.token_date);if(d&&!tkMap[tk].dt)tkMap[tk].dt=fd(d);tkMap[tk].qty+=parseFloat(r.actualqty)||0;tkMap[tk].cons++;const ns=normStatus(r.cstatus);if(ns==='Approve')tkMap[tk].ap++;else if(ns==='Reject')tkMap[tk].rj++;else if(ns==='Hold')tkMap[tk].hd++;});
+  const toks=Object.values(tkMap).sort((a,b)=>a.dt.localeCompare(b.dt)||a.fc.localeCompare(b.fc));
+  document.getElementById('dmt-tok-note').textContent=`${toks.length.toLocaleString()} trucks`;
+  document.getElementById('dmt-tok-tbl').innerHTML=`<table><thead><tr><th>Token No</th><th>Date</th><th>FC</th><th>Vehicle</th><th>Vehicle No</th><th class="r">Cons</th><th class="r">Qty</th><th class="r">Approved</th><th class="r">Rejected</th><th class="r">Gate→Dock</th><th class="r">Unload TAT</th><th class="r">Dock→Gate</th><th class="r">E2E</th></tr></thead><tbody>
+  ${toks.slice(0,500).map(r=>{const g2d=tatMin(r.gi,r.di),ul=tatMin(r.di,r.do_),d2g=tatMin(r.do_,r.go),e2e=tatMin(r.gi,r.go);return`<tr><td style="font-family:monospace;font-size:9px">${r.tk}</td><td>${r.dt}</td><td>${r.fc}</td><td>${r.veh}</td><td style="font-family:monospace;font-size:9px">${r.vno||'—'}</td><td class="r">${r.cons}</td><td class="r">${fmt(r.qty)}</td><td class="r" style="color:var(--grn)">${r.ap}</td><td class="r" style="color:var(--red)">${r.rj}</td><td class="r"><span class="bd ${cTat(g2d)}">${g2d??'—'}m</span></td><td class="r"><span class="bd ${cTat(ul)}">${ul??'—'}m</span></td><td class="r"><span class="bd ${cTat(d2g)}">${d2g??'—'}m</span></td><td class="r"><span class="bd ${cTat(e2e)}">${e2e??'—'}m</span></td></tr>`;}).join('')}
+  </tbody></table>`;
+  attachSort('dmt-tok-tbl', 'sb-dmt-tok');
+}
+
+// ═══════════════════════════════════
+// TAB 2 — INBOUND CAPACITY
+// ═══════════════════════════════════
+function renderIB(){
+  const ib=fIB();
+  const ibAny = DS._agg ? (DS._agg.ib && DS._agg.ib.length) : ib.length;
+  document.getElementById('e2ib').style.display=ibAny?'none':'';
+  document.getElementById('c2ib').style.display=ibAny?'':'none';
+  if(!ibAny) return;
+
+  const n=v=>parseFloat(String(v||0).replace(/,/g,''))||0;
+
+  // Totals
+  const totT=ib.reduce((a,r)=>a+n(r['MPFBF Total']),0);
+  const totPL=ib.reduce((a,r)=>a+n(r['MPFBF PL Final Cap']),0);
+  const totSelf=ib.reduce((a,r)=>a+n(r['MPFBF Self Caps']),0);
+  const zones=[...new Set(ib.filter(r=>r.Zone!=='FALSE').map(r=>r.Zone||''))].filter(Boolean);
+  const fcCount=[...new Set(ib.map(r=>fcName(r.FC)||'').filter(Boolean))].length;
+  const dateCount=[...new Set(ib.map(r=>r.Date||''))].filter(Boolean).length;
+
+  document.getElementById('k2ib').innerHTML=`
+    <div class="kc t"><div class="kl">Total MPFBF Cap</div><div class="kv">${fmt(totT)}</div><div class="ks">${fcCount} FCs · ${dateCount} dates</div></div>
+    <div class="kc b"><div class="kl">PL Final Cap</div><div class="kv">${fmt(totPL)}</div><div class="ks">${pct(totT>0?totPL/totT:null)} of total</div></div>
+    <div class="kc p"><div class="kl">Self Cap</div><div class="kv">${fmt(totSelf)}</div><div class="ks">${pct(totT>0?totSelf/totT:null)} of total</div></div>
+    <div class="kc"><div class="kl">Zones</div><div class="kv">${zones.length}</div><div class="ks">${zones.join(' · ')}</div></div>
+    <div class="kc"><div class="kl">FCs</div><div class="kv">${fcCount}</div></div>
+  `;
+
+  // FC summary table (aggregate across dates)
+  const fcMap={};
+  ib.forEach(r=>{
+    const fc=fcName(r.FC)||r.FC||'?';
+    if(!fcMap[fc]) fcMap[fc]={fc,code:r.FC||'',zone:r.Zone||'',total:0,pl:0,self:0,days:new Set()};
+    fcMap[fc].total+=n(r['MPFBF Total']);
+    fcMap[fc].pl+=n(r['MPFBF PL Final Cap']);
+    fcMap[fc].self+=n(r['MPFBF Self Caps']);
+    const d=parseDate(r.Date); if(d) fcMap[fc].days.add(fd(d));
+  });
+  const fcRows=Object.values(fcMap).sort((a,b)=>b.total-a.total);
+  document.getElementById('ib-note').textContent=`${fcRows.length} FCs`;
+  document.getElementById('ib-fc-tbl').innerHTML=`
+  <table>
+    <thead><tr>
+      <th>FC (Display Name)</th><th>Warehouse Code</th><th>Zone</th><th class="r">Days Data</th>
+      <th class="r">Total Cap (Sum)</th><th class="r">Avg Daily Total</th>
+      <th class="r">PL Final Cap (Sum)</th><th class="r">PL %</th>
+      <th class="r">Self Cap (Sum)</th><th class="r">Self %</th>
+    </tr></thead>
+    <tbody>
+    ${fcRows.map(r=>{
+      const days=r.days.size||1, avgD=Math.round(r.total/days);
+      return`<tr>
+        <td><strong>${r.fc}</strong></td>
+        <td style="font-size:9px;color:var(--mut);font-family:monospace">${r.code}</td>
+        <td><span class="bd bb">${r.zone}</span></td>
+        <td class="r">${r.days.size}</td>
+        <td class="r">${fmt(r.total)}</td>
+        <td class="r">${fmt(avgD)}</td>
+        <td class="r">${fmt(r.pl)}</td>
+        <td class="r ${pctCls(r.total>0?r.pl/r.total:null)}">${pct(r.total>0?r.pl/r.total:null)}</td>
+        <td class="r">${fmt(r.self)}</td>
+        <td class="r">${pct(r.total>0?r.self/r.total:null)}</td>
+      </tr>`;
+  attachSort('ib-fc-tbl', 'sb-ib-fc');
+    }).join('')}
+    <tr class="total">
+      <td colspan="3"><strong>TOTAL</strong></td>
+      <td class="r">—</td>
+      <td class="r">${fmt(totT)}</td><td class="r">—</td>
+      <td class="r">${fmt(totPL)}</td>
+      <td class="r">${pct(totT>0?totPL/totT:null)}</td>
+      <td class="r">${fmt(totSelf)}</td>
+      <td class="r">${pct(totT>0?totSelf/totT:null)}</td>
+    </tr>
+    </tbody>
+  </table>`;
+
+  // FC × Date timeline (last 30 dates to keep it readable)
+  const dateSet=new Set();
+  const fcDateMap={};
+  ib.forEach(r=>{
+    const fc=fcName(r.FC)||r.FC||'?';
+    const d=parseDate(r.Date); if(!d) return;
+    const dk=fd(d);
+    dateSet.add(dk);
+    if(!fcDateMap[fc]) fcDateMap[fc]={};
+    if(!fcDateMap[fc][dk]) fcDateMap[fc][dk]={total:0,pl:0,self:0};
+    fcDateMap[fc][dk].total+=n(r['MPFBF Total']);
+    fcDateMap[fc][dk].pl+=n(r['MPFBF PL Final Cap']);
+    fcDateMap[fc][dk].self+=n(r['MPFBF Self Caps']);
+  });
+  const allDates=[...dateSet].sort().slice(-30); // show last 30 dates
+  const fcNames=Object.keys(fcDateMap).sort();
+  document.getElementById('ib-tl-note').textContent=`Last ${allDates.length} dates · ${fcNames.length} FCs (Total Cap shown)`;
+  document.getElementById('ib-tl-tbl').innerHTML=`
+  <table>
+    <thead><tr>
+      <th>FC</th>
+      ${allDates.map(d=>`<th class="r">${d.slice(5)}</th>`).join('')}
+      <th class="r">Avg Daily</th>
+    </tr></thead>
+    <tbody>
+    ${fcNames.map(fc=>{
+      let dayCount=0, totalSum=0;
+      const cells=allDates.map(d=>{
+        const v=(fcDateMap[fc]||{})[d];
+        if(v&&v.total>0){dayCount++;totalSum+=v.total;return`<td class="r">${fmt(v.total)}</td>`;}
+        return`<td class="r" style="color:var(--bdr)">—</td>`;
+  attachSort('ib-tl-tbl', 'sb-ib-tl');
+      }).join('');
+      const avg=dayCount>0?Math.round(totalSum/dayCount):0;
+      return`<tr><td><strong>${fc}</strong></td>${cells}<td class="r"><strong>${fmt(avg)}</strong></td></tr>`;
+    }).join('')}
+    <tr class="total">
+      <td>TOTAL</td>
+      ${allDates.map(d=>{
+        let s=0; fcNames.forEach(fc=>{const v=(fcDateMap[fc]||{})[d];if(v)s+=v.total;});
+        return`<td class="r">${fmt(s)}</td>`;
+      }).join('')}
+      <td class="r">—</td>
+    </tr>
+    </tbody>
+  </table>`;
+
+  // Zone summary
+  const zoneMap={};
+  ib.filter(r=>r.Zone!=='FALSE').forEach(r=>{
+    const z=r.Zone||'?';
+    if(!zoneMap[z]) zoneMap[z]={zone:z,total:0,pl:0,self:0,fcs:new Set()};
+    zoneMap[z].total+=n(r['MPFBF Total']);
+    zoneMap[z].pl+=n(r['MPFBF PL Final Cap']);
+    zoneMap[z].self+=n(r['MPFBF Self Caps']);
+    const fc=fcName(r.FC)||r.FC; if(fc) zoneMap[z].fcs.add(fc);
+  });
+  const zoneRows=Object.values(zoneMap).sort((a,b)=>b.total-a.total);
+  document.getElementById('ib-zone-tbl').innerHTML=`
+  <table>
+    <thead><tr>
+      <th>Zone</th><th class="r">FCs</th>
+      <th class="r">Total Cap</th><th class="r">PL Cap</th><th class="r">PL %</th>
+      <th class="r">Self Cap</th><th class="r">Self %</th>
+    </tr></thead>
+    <tbody>
+    ${zoneRows.map(r=>`<tr>
+      <td><strong>${r.zone}</strong></td>
+      <td class="r">${r.fcs.size}</td>
+      <td class="r">${fmt(r.total)}</td>
+      <td class="r">${fmt(r.pl)}</td>
+      <td class="r ${pctCls(r.total>0?r.pl/r.total:null)}">${pct(r.total>0?r.pl/r.total:null)}</td>
+      <td class="r">${fmt(r.self)}</td>
+      <td class="r">${pct(r.total>0?r.self/r.total:null)}</td>
+    </tr>`).join('')}
+    <tr class="total">
+      <td><strong>TOTAL</strong></td><td class="r">${fcCount}</td>
+      <td class="r">${fmt(totT)}</td><td class="r">${fmt(totPL)}</td>
+      <td class="r">${pct(totT>0?totPL/totT:null)}</td>
+      <td class="r">${fmt(totSelf)}</td>
+      <td class="r">${pct(totT>0?totSelf/totT:null)}</td>
+    </tr>
+    </tbody>
+  </table>`;
+  attachSort('ib-zone-tbl', 'sb-ib-zone');
+}
+
+// ═══════════════════════════════════
+// TAB 2 — FC DEEP DIVE
+// ═══════════════════════════════════
+function clrDD(){['dd-from','dd-to','dd-week','dd-vtype','dd-vno'].forEach(id=>document.getElementById(id).value='');renderDD();}
+
+function isoWeekLabel(d){return `W${String(isoWeek(d)).padStart(2,'0')}-${isoYear(d)}`;}
+
+function buildDDopts(){
+  const fc=document.getElementById('ddfc').value;
+  if(!fc){document.getElementById('e3').style.display='';document.getElementById('c3').style.display='none';return;}
+  const rows=DS.dmt.filter(r=>r.sname==='MPFBF'&&fcName(r.facility_name||'')===fc);
+  const weeks=new Set(),vtypes=new Set();
+  rows.forEach(r=>{const d=parseDate(r.token_date);if(d)weeks.add(isoWeekLabel(d));if(r.vehicle_type)vtypes.add(r.vehicle_type.trim());});
+  function pop(id,items,first){const s=document.getElementById(id),cur=s.value;s.innerHTML=`<option value="">${first}</option>`;[...items].sort().forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;if(v===cur)o.selected=true;s.appendChild(o);});}
+  pop('dd-week',weeks,'All Weeks'); pop('dd-vtype',vtypes,'All Vehicle Types');
+  renderDD();
+}
+
+function renderDD(){
+  const fc=document.getElementById('ddfc').value;
+  document.getElementById('e3').style.display=fc?'none':'';
+  document.getElementById('c3').style.display=fc?'':'none';
+  if(!fc) return;
+
+  // Read deep dive filters
+  const ddFrom=document.getElementById('dd-from').value||'';
+  const ddTo=document.getElementById('dd-to').value||'';
+  const ddWeek=document.getElementById('dd-week').value||'';
+  const ddVtype=document.getElementById('dd-vtype').value||'';
+  const ddVno=(document.getElementById('dd-vno').value||'').trim().toLowerCase();
+
+  // Filter DMT rows for this FC
+  const dmtFC=DS.dmt.filter(r=>{
+    if(r.sname!=='MPFBF') return false;
+    if(fcName(r.facility_name||'')!==fc) return false;
+    const d=parseDate(r.token_date);
+    if(ddFrom&&d&&fd(d)<ddFrom) return false;
+    if(ddTo&&d&&fd(d)>ddTo) return false;
+    if(ddWeek&&d&&isoWeekLabel(d)!==ddWeek) return false;
+    if(ddVtype&&(r.vehicle_type||'').trim()!==ddVtype) return false;
+    if(ddVno&&!(r.veh_reg_no||'').toLowerCase().includes(ddVno)) return false;
+    return true;
+  });
+
+  // Filter GCP for this FC by drop_date
+  // In published mode DS.gcp is empty - use DS._agg.rv for sched/grn data
+  // gcpFC_sched and gcpFC_recv used only for daily inbound table in DD
+  // The aggregated rv rows already have sched/grn per fc+date
+  const gcpFC_sched = DS._agg ? [] : DS.gcp.filter(r=>{
+    if(fcName(r.warehouse_id||'')!==fc) return false;
+    const d=parseDate(r['scheduled_drop_date[latest_scheduled_date]']);
+    if((ddFrom||ddTo)&&!d) return false;
+    if(ddFrom&&d&&fd(d)<ddFrom) return false;
+    if(ddTo&&d&&fd(d)>ddTo) return false;
+    return true;
+  });
+  const gcpFC_recv = DS._agg ? [] : DS.gcp.filter(r=>{
+    if(fcName(r.warehouse_id||'')!==fc) return false;
+    const d=parseDate(r.received_date);
+    if((ddFrom||ddTo)&&!d) return false;
+    if(ddFrom&&d&&fd(d)<ddFrom) return false;
+    if(ddTo&&d&&fd(d)>ddTo) return false;
+    return true;
+  });
+  // In published mode: populate daily map from DS._agg.rv for this FC
+  const aggRVforFC = DS._agg ? (DS._agg.rv||[]).filter(r=>{
+    if(r.fc!==fc) return false;
+    if(ddFrom&&r.d&&r.d<ddFrom) return false;
+    if(ddTo&&r.d&&r.d>ddTo) return false;
+    return true;
+  }) : [];
+
+  // ── Truck-level aggregation ──
+  const truckMap={};
+  dmtFC.forEach(r=>{
+    const tk=r.token_no||'?';
+    if(!truckMap[tk]){
+      const d=parseDate(r.token_date);
+      truckMap[tk]={tk,veh:(r.vehicle_type||'').trim(),vno:(r.veh_reg_no||'').trim(),date:d?fd(d):'',week:d?isoWeekLabel(d):'',gi:r.gate_in_time,di:r.dock_in_time,do_:r.dock_out_time,go:r.gate_out_time,cons:0,qty:0,invQty:0,ap:0,rj:0,hd:0,qtyMismatch:0};
+    }
+    const q=parseFloat(r.actualqty)||0,iq=parseFloat(r.invoiceqty)||0;
+    truckMap[tk].cons++; truckMap[tk].qty+=q; truckMap[tk].invQty+=iq;
+    if(Math.abs(iq-q)>0.5) truckMap[tk].qtyMismatch++;
+    const ns=normStatus(r.cstatus);
+    if(ns==='Approve')truckMap[tk].ap++;else if(ns==='Reject')truckMap[tk].rj++;else if(ns==='Hold')truckMap[tk].hd++;
+  });
+  const trucks=Object.values(truckMap).sort((a,b)=>a.date.localeCompare(b.date));
+
+  // ── Totals ──
+  const totCons=dmtFC.length, totTrucks=trucks.length;
+  const totQty=dmtFC.reduce((a,r)=>a+(parseFloat(r.actualqty)||0),0);
+  const totInvQty=dmtFC.reduce((a,r)=>a+(parseFloat(r.invoiceqty)||0),0);
+  const apCons=dmtFC.filter(r=>normStatus(r.cstatus)==='Approve').length;
+  const rjCons=dmtFC.filter(r=>normStatus(r.cstatus)==='Reject').length;
+  const hdCons=dmtFC.filter(r=>normStatus(r.cstatus)==='Hold').length;
+  const rjQty=dmtFC.filter(r=>normStatus(r.cstatus)==='Reject').reduce((a,r)=>a+(parseFloat(r.actualqty)||0),0);
+  const hdQty=dmtFC.filter(r=>r.hold_reason&&r.hold_reason!=='nan').reduce((a,r)=>a+(parseFloat(r.actualqty)||0),0);
+  const qtyMismatchCons=dmtFC.filter(r=>Math.abs((parseFloat(r.invoiceqty)||0)-(parseFloat(r.actualqty)||0))>0.5).length;
+  const tats=dmtFC.map(r=>tatMin(r.dock_in_time,r.dock_out_time)).filter(v=>v!==null);
+  const avgTat=tats.length?Math.round(tats.reduce((a,b)=>a+b,0)/tats.length):null;
+  const schQty=gcpFC_sched.reduce((a,r)=>a+(parseFloat(r.Promised_quantity)||0),0);
+  const schCons=gcpFC_sched.length;
+  // Reported = invoiceqty from DMT (consistent with main Reporting View)
+  const repQty=dmtFC.reduce((a,r)=>a+(parseFloat(r.invoiceqty)||0),0);
+  const repCons=dmtFC.length;
+  // GRN = actual_quantity from GCP by received_date (all received statuses)
+  const grnQty=gcpFC_recv.reduce((a,r)=>a+(parseFloat(r.actual_quantity)||0),0);
+  const grnCons=gcpFC_recv.filter(r=>(parseFloat(r.actual_quantity)||0)>0).length;
+
+  // Active filter display
+  const ftags=[ddFrom&&`From:${ddFrom}`,ddTo&&`To:${ddTo}`,ddWeek&&`Week:${ddWeek}`,ddVtype&&`Type:${ddVtype}`,ddVno&&`VehNo:${ddVno}`].filter(Boolean);
+
+  // ── KPI Cards ──
+  document.getElementById('k2').innerHTML=`
+    <div class="kc"><div class="kl">FC</div><div class="kv" style="font-size:12px">${fc}</div><div class="ks">${ftags.join(' · ')||'All data'}</div></div>
+    <div class="kc b"><div class="kl">Scheduled Qty</div><div class="kv">${fmt(schQty)}</div><div class="ks">${fmt(schCons)} consignments</div></div>
+    <div class="kc"><div class="kl">Reported Qty (Invoice)</div><div class="kv">${fmt(repQty)}</div><div class="ks">${fmt(repCons)} DMT rows</div></div>
+    <div class="kc p"><div class="kl">Unloaded Qty</div><div class="kv">${fmt(totQty)}</div><div class="ks">${fmt(totCons)} cons · ${fmt(totTrucks)} trucks</div></div>
+    <div class="kc ${grnQty>0&&totQty>0?(grnQty/totQty>=.9?'g':grnQty/totQty>=.75?'y':'r'):''}"><div class="kl">GRN Qty</div><div class="kv">${fmt(grnQty)}</div><div class="ks">GRN% ${pct(totQty>0?grnQty/totQty:null)} · ${fmt(grnCons)} cons</div></div>
+    <div class="kc y"><div class="kl">Hold Qty</div><div class="kv">${fmt(hdQty)}</div><div class="ks">${fmt(hdCons)} consignments</div></div>
+    <div class="kc r"><div class="kl">Rejected Qty</div><div class="kv">${fmt(rjQty)}</div><div class="ks">${fmt(rjCons)} cons · ${pct(totCons?rjCons/totCons:null)}</div></div>
+    <div class="kc ${avgTat&&avgTat<=60?'g':avgTat&&avgTat<=120?'y':'r'}"><div class="kl">Avg Unload TAT</div><div class="kv">${avgTat??'—'} min</div></div>
+    <div class="kc g"><div class="kl">Approved Cons</div><div class="kv">${fmt(apCons)}</div><div class="ks">${pct(totCons?apCons/totCons:null)}</div></div>
+    <div class="kc ${qtyMismatchCons>0?'y':'g'}"><div class="kl">Qty Mismatch</div><div class="kv">${fmt(qtyMismatchCons)}</div><div class="ks">invoice ≠ actual</div></div>
+    <div class="kc"><div class="kl">Invoice Qty</div><div class="kv">${fmt(totInvQty)}</div><div class="ks">Actual: ${fmt(totQty)}</div></div>
+  `;
+
+  // ── SECTION 1: Daily Inbound View ──
+  // Columns: Date | Sched Cons | Sched Qty | Rep Cons | Rep Qty | Trucks | Unloaded Cons | Unloaded Qty | GRN Cons | GRN Qty | GRN% | Hold Cons | Hold Qty | Rej Cons | Rej Qty
+  const dailyMap={};
+  function mkd(dk){if(!dailyMap[dk])dailyMap[dk]={date:dk,schCons:0,schQty:0,repCons:0,repQty:0,trucks:new Set(),ulCons:0,ulQty:0,grnCons:0,grnQty:0,holdCons:0,holdQty:0,rejCons:0,rejQty:0};}
+  if(DS._agg && aggRVforFC.length){
+    // Published mode: build daily map from pre-aggregated rv rows
+    aggRVforFC.forEach(r=>{
+      const dk=r.d; mkd(dk);
+      dailyMap[dk].schCons+=r.schCons||0; dailyMap[dk].schQty+=r.schT||0;
+      dailyMap[dk].repCons+=r.repCons||0; dailyMap[dk].repQty+=r.repT||0;
+      dailyMap[dk].ulCons+=r.ulCons||0;   dailyMap[dk].ulQty+=r.ulT||0;
+      dailyMap[dk].grnCons+=r.grnCons||0; dailyMap[dk].grnQty+=r.grnT||0;
+      dailyMap[dk].holdCons+=r.holdCons||0; dailyMap[dk].holdQty+=r.holdT||0;
+      dailyMap[dk].rejCons+=r.rejCons||0;  dailyMap[dk].rejQty+=r.rejT||0;
+    });
+    // Also populate truck counts from tokens
+    (DS._agg.tokens||[]).filter(t=>t.fc===fc&&(!ddFrom||t.d>=ddFrom)&&(!ddTo||t.d<=ddTo)).forEach(t=>{
+      const dk=t.d; mkd(dk); dailyMap[dk].trucks.add(t.tk);
+    });
+  } else {
+    gcpFC_sched.forEach(r=>{const d=parseDate(r['scheduled_drop_date[latest_scheduled_date]']);if(!d)return;const dk=fd(d);mkd(dk);dailyMap[dk].schCons++;dailyMap[dk].schQty+=parseFloat(r.Promised_quantity)||0;});
+    gcpFC_recv.forEach(r=>{const d=parseDate(r.received_date);if(!d)return;const dk=fd(d);mkd(dk);const gq=parseFloat(r.actual_quantity)||0;if(gq>0){dailyMap[dk].grnCons++;dailyMap[dk].grnQty+=gq;}});
+    dmtFC.forEach(r=>{const d=parseDate(r.token_date);if(!d)return;const dk=fd(d);mkd(dk);dailyMap[dk].trucks.add(r.token_no);dailyMap[dk].repCons++;dailyMap[dk].repQty+=parseFloat(r.invoiceqty)||0;dailyMap[dk].ulCons++;const q=parseFloat(r.actualqty)||0;dailyMap[dk].ulQty+=q;const ns=normStatus(r.cstatus);if(r.hold_reason&&r.hold_reason!=='nan'){dailyMap[dk].holdCons++;dailyMap[dk].holdQty+=q;}if(ns==='Reject'){dailyMap[dk].rejCons++;dailyMap[dk].rejQty+=q;}});
+  }
+  const dailyRows=Object.values(dailyMap).sort((a,b)=>a.date.localeCompare(b.date));
+  // Totals for daily table
+  const DT={schCons:0,schQty:0,repCons:0,repQty:0,trucks:new Set(),ulCons:0,ulQty:0,grnCons:0,grnQty:0,holdCons:0,holdQty:0,rejCons:0,rejQty:0};
+  dailyRows.forEach(r=>{Object.keys(DT).forEach(k=>k==='trucks'?r.trucks.forEach(t=>DT.trucks.add(t)):DT[k]+=r[k]||0);});
+  document.getElementById('dd-rv-note').textContent=`${dailyRows.length} dates`;
+  document.getElementById('dd-rv-tbl').innerHTML=`
+  <table>
+    <thead>
+      <tr>
+        <th rowspan="2">Date</th>
+        <th colspan="2" style="text-align:center;background:rgba(59,130,246,.08);color:var(--a2)">Scheduled</th>
+        <th colspan="2" style="text-align:center">Reported</th>
+        <th colspan="3" style="text-align:center;background:rgba(168,85,247,.08);color:var(--pur)">Unloaded</th>
+        <th colspan="3" style="text-align:center;background:rgba(34,197,94,.08);color:var(--grn)">GRN</th>
+        <th colspan="2" style="text-align:center;background:rgba(234,179,8,.08);color:var(--ylw)">Hold</th>
+        <th colspan="2" style="text-align:center;background:rgba(239,68,68,.08);color:var(--red)">Reject</th>
+      </tr>
+      <tr>
+        <th class="r" style="background:rgba(59,130,246,.05)">Cons</th><th class="r" style="background:rgba(59,130,246,.05)">Qty</th>
+        <th class="r">Cons</th><th class="r">Qty</th>
+        <th class="r" style="background:rgba(168,85,247,.05)">Trucks</th><th class="r" style="background:rgba(168,85,247,.05)">Cons</th><th class="r" style="background:rgba(168,85,247,.05)">Qty</th>
+        <th class="r" style="background:rgba(34,197,94,.05)">Cons</th><th class="r" style="background:rgba(34,197,94,.05)">Qty</th><th class="r" style="background:rgba(34,197,94,.05)">GRN%</th>
+        <th class="r" style="background:rgba(234,179,8,.05)">Cons</th><th class="r" style="background:rgba(234,179,8,.05)">Qty</th>
+        <th class="r" style="background:rgba(239,68,68,.05)">Cons</th><th class="r" style="background:rgba(239,68,68,.05)">Qty</th>
+      </tr>
+    </thead>
+    <tbody>
+    ${dailyRows.map(r=>{const gp=r.ulQty>0?r.grnQty/r.ulQty:null;return`<tr>
+      <td>${r.date}</td>
+      <td class="r">${fmt(r.schCons)}</td><td class="r">${fmt(r.schQty)}</td>
+      <td class="r">${fmt(r.repCons)}</td><td class="r">${fmt(r.repQty)}</td>
+      <td class="r"><strong>${r.trucks.size}</strong></td><td class="r">${fmt(r.ulCons)}</td><td class="r">${fmt(r.ulQty)}</td>
+      <td class="r">${fmt(r.grnCons)}</td><td class="r">${fmt(r.grnQty)}</td><td class="r ${grnCls(gp)}">${pct(gp)}</td>
+      <td class="r">${r.holdCons>0?fmt(r.holdCons):'—'}</td><td class="r">${r.holdQty>0?fmt(r.holdQty):'—'}</td>
+      <td class="r">${r.rejCons>0?fmt(r.rejCons):'—'}</td><td class="r">${r.rejQty>0?fmt(r.rejQty):'—'}</td>
+    </tr>`;}).join('')}
+    <tr class="total">
+      <td><strong>TOTAL</strong></td>
+      <td class="r">${fmt(DT.schCons)}</td><td class="r">${fmt(DT.schQty)}</td>
+      <td class="r">${fmt(DT.repCons)}</td><td class="r">${fmt(DT.repQty)}</td>
+      <td class="r"><strong>${DT.trucks.size}</strong></td><td class="r">${fmt(DT.ulCons)}</td><td class="r">${fmt(DT.ulQty)}</td>
+      <td class="r">${fmt(DT.grnCons)}</td><td class="r">${fmt(DT.grnQty)}</td><td class="r ${grnCls(DT.ulQty>0?DT.grnQty/DT.ulQty:null)}">${pct(DT.ulQty>0?DT.grnQty/DT.ulQty:null)}</td>
+      <td class="r">${fmt(DT.holdCons)}</td><td class="r">${fmt(DT.holdQty)}</td>
+      <td class="r">${fmt(DT.rejCons)}</td><td class="r">${fmt(DT.rejQty)}</td>
+    </tr>
+    </tbody>
+  </table>`;
+  attachSort('dd-rv-tbl', 'sb-dd-rv');
+
+  // ── SECTION 2: TAT Summary by vehicle type ──
+  const tatByVeh={};
+  dmtFC.forEach(r=>{
+    const k=(r.vehicle_type||'?').trim();
+    if(!tatByVeh[k])tatByVeh[k]={cnt:0,tknToGI:[],GItoDI:[],DItoGO:[],GItoDO:[],DItoGateOut:[],e2e:[]};
+    tatByVeh[k].cnt++;
+    // All 4 TAT legs
+    const t1=tatMin(r.token_date,r.gate_in_time);   // Token time to Gate-in
+    const t2=tatMin(r.gate_in_time,r.dock_in_time); // Gate-in to Dock-in
+    const t3=tatMin(r.dock_in_time,r.dock_out_time); // Dock-in to Dock-out (unloading)
+    const t4=tatMin(r.dock_out_time,r.gate_out_time); // Dock-out to Gate-out
+    const t5=tatMin(r.gate_in_time,r.gate_out_time);  // Gate-in to Gate-out
+    if(t1!==null&&t1<1440)tatByVeh[k].tknToGI.push(t1);
+    if(t2!==null)tatByVeh[k].GItoDI.push(t2);
+    if(t3!==null)tatByVeh[k].DItoGO.push(t3);
+    if(t4!==null)tatByVeh[k].DItoGateOut.push(t4);
+    if(t5!==null)tatByVeh[k].e2e.push(t5);
+  });
+  const avga=a=>a.length?Math.round(a.reduce((x,y)=>x+y,0)/a.length):null;
+  const tatRows=Object.entries(tatByVeh).map(([k,v])=>({k,cnt:v.cnt,tknGI:avga(v.tknToGI),GIdock:avga(v.GItoDI),unload:avga(v.DItoGO),dockGate:avga(v.DItoGateOut),e2e:avga(v.e2e)})).sort((a,b)=>b.cnt-a.cnt);
+  // Overall row
+  const allTAT={tknToGI:[],GItoDI:[],DItoGO:[],DItoGateOut:[],e2e:[]};
+  dmtFC.forEach(r=>{const t1=tatMin(r.token_date,r.gate_in_time),t2=tatMin(r.gate_in_time,r.dock_in_time),t3=tatMin(r.dock_in_time,r.dock_out_time),t4=tatMin(r.dock_out_time,r.gate_out_time),t5=tatMin(r.gate_in_time,r.gate_out_time);if(t1!==null&&t1<1440)allTAT.tknToGI.push(t1);if(t2!==null)allTAT.GItoDI.push(t2);if(t3!==null)allTAT.DItoGO.push(t3);if(t4!==null)allTAT.DItoGateOut.push(t4);if(t5!==null)allTAT.e2e.push(t5);});
+  document.getElementById('dd-tat-sum').innerHTML=`
+  <table>
+    <thead><tr>
+      <th>Vehicle Type</th><th class="r">Trucks</th>
+      <th class="r">Token → Gate-in<br><span style="font-weight:400;font-size:9px">(avg mins)</span></th>
+      <th class="r">Gate-in → Dock-in<br><span style="font-weight:400;font-size:9px">(avg mins)</span></th>
+      <th class="r">Dock-in → Dock-out<br><span style="font-weight:400;font-size:9px">Unloading TAT (avg)</span></th>
+      <th class="r">Dock-out → Gate-out<br><span style="font-weight:400;font-size:9px">(avg mins)</span></th>
+      <th class="r">Gate-in → Gate-out<br><span style="font-weight:400;font-size:9px">E2E TAT (avg)</span></th>
+    </tr></thead>
+    <tbody>
+    ${tatRows.map(r=>`<tr>
+      <td>${r.k}</td><td class="r">${r.cnt}</td>
+      <td class="r"><span class="bd ${cTat(r.tknGI)}">${r.tknGI??'—'}m</span></td>
+      <td class="r"><span class="bd ${cTat(r.GIdock)}">${r.GIdock??'—'}m</span></td>
+      <td class="r"><span class="bd ${cTat(r.unload)}">${r.unload??'—'}m</span></td>
+      <td class="r"><span class="bd ${cTat(r.dockGate)}">${r.dockGate??'—'}m</span></td>
+      <td class="r"><span class="bd ${cTat(r.e2e)}">${r.e2e??'—'}m</span></td>
+    </tr>`).join('')}
+    <tr class="total"><td><strong>ALL VEHICLES</strong></td><td class="r">${totTrucks}</td>
+      <td class="r"><span class="bd ${cTat(avga(allTAT.tknToGI))}">${avga(allTAT.tknToGI)??'—'}m</span></td>
+      <td class="r"><span class="bd ${cTat(avga(allTAT.GItoDI))}">${avga(allTAT.GItoDI)??'—'}m</span></td>
+      <td class="r"><span class="bd ${cTat(avga(allTAT.DItoGO))}">${avga(allTAT.DItoGO)??'—'}m</span></td>
+      <td class="r"><span class="bd ${cTat(avga(allTAT.DItoGateOut))}">${avga(allTAT.DItoGateOut)??'—'}m</span></td>
+      <td class="r"><span class="bd ${cTat(avga(allTAT.e2e))}">${avga(allTAT.e2e)??'—'}m</span></td>
+    </tr>
+    </tbody>
+  </table>`;
+  attachSort('dd-tat-sum', 'sb-dd-tat');
+
+  // ── SECTION 3: Truck-level table ──
+  document.getElementById('dd-trk-note').textContent=`${trucks.length.toLocaleString()} trucks`;
+  document.getElementById('dd-trk-tbl').innerHTML=`
+  <table>
+    <thead><tr>
+      <th>Token No</th><th>Date</th><th>Week</th><th>Vehicle Type</th><th>Vehicle No</th>
+      <th class="r">Cons</th><th class="r">Unloaded Qty</th><th class="r">Invoice Qty</th><th class="r">Qty Mismatch</th>
+      <th class="r">Approved</th><th class="r">Rejected</th><th class="r">Hold</th>
+      <th class="r">Tkn→Gate-in</th><th class="r">Gate-in→Dock</th><th class="r">Unload TAT</th><th class="r">Dock→Gate-out</th><th class="r">E2E TAT</th>
+    </tr></thead>
+    <tbody>
+    ${trucks.slice(0,500).map(t=>{
+      const t1=tatMin(t.date+' 00:00:00',t.gi)===null?'—':null; // token_date to gate_in - use row-level
+      const tknGI=tatMin(t.date,t.gi), g2d=tatMin(t.gi,t.di), ul=tatMin(t.di,t.do_), d2g=tatMin(t.do_,t.go), e2e=tatMin(t.gi,t.go);
+      const qm=Math.abs(t.invQty-t.qty)>0.5;
+      return`<tr>
+        <td style="font-family:monospace;font-size:9px">${t.tk}</td>
+        <td>${t.date}</td><td><span class="bd bb">${t.week}</span></td>
+        <td>${t.veh}</td><td style="font-family:monospace;font-size:9px">${t.vno||'—'}</td>
+        <td class="r">${t.cons}</td><td class="r">${fmt(t.qty)}</td><td class="r">${fmt(t.invQty)}</td>
+        <td class="r">${qm?`<span class="bd by">${fmt(Math.abs(t.invQty-t.qty))}</span>`:'<span class="bd bg">✓</span>'}</td>
+        <td class="r" style="color:var(--grn)">${t.ap}</td>
+        <td class="r" style="color:var(--red)">${t.rj}</td>
+        <td class="r" style="color:var(--ylw)">${t.hd}</td>
+        <td class="r"><span class="bd">${tknGI!==null?tknGI+'m':'—'}</span></td>
+        <td class="r"><span class="bd ${cTat(g2d)}">${g2d??'—'}m</span></td>
+        <td class="r"><span class="bd ${cTat(ul)}">${ul??'—'}m</span></td>
+        <td class="r"><span class="bd ${cTat(d2g)}">${d2g??'—'}m</span></td>
+        <td class="r"><span class="bd ${cTat(e2e)}">${e2e??'—'}m</span></td>
+      </tr>`;
+  attachSort('dd-trk-tbl', 'sb-dd-trk');
+    }).join('')}
+    </tbody>
+  </table>`;
+}
+
+// ═══════════════════════════════════
+// THEME
+// ═══════════════════════════════════
+function toggleTheme(){
+  document.body.classList.toggle('light');
+  document.getElementById('thbtn').textContent=document.body.classList.contains('light')?'🌙':'☀️';
+  renderTab();
+}
+
+// ═══════════════════════════════════
+// UNIVERSAL TABLE SORT ENGINE
+// Usage: makeTableSortable(tableId, sortBarId)
+// Reads data-val attributes on td for numeric sort
+// ═══════════════════════════════════
+function makeTableSortable(tableId, sortBarId){
+  const tbl = document.getElementById(tableId);
+  if(!tbl) return;
+  if(!window._tblSort) window._tblSort = {};
+  if(!window._tblSort[tableId]) window._tblSort[tableId] = [];
+  const state = window._tblSort[tableId];
+
+  const ths = tbl.querySelectorAll('thead th');
+  ths.forEach((th, ci) => {
+    if(th.rowSpan > 1 && th.colSpan > 1) return; // skip group headers
+    if(th.colSpan > 1) return;
+    th.classList.add('sortable');
+    if(!th.querySelector('.si')) th.innerHTML += ' <span class="si"></span>';
+    th.onclick = function(e){
+      const existing = state.findIndex(s=>s.ci===ci);
+      if(e.shiftKey){
+        if(existing===-1) state.push({ci,dir:'desc'});
+        else if(state[existing].dir==='desc') state[existing].dir='asc';
+        else state.splice(existing,1);
+      } else {
+        const was = existing>-1 ? state[existing].dir : null;
+        state.length=0;
+        if(was!=='desc') state.push({ci,dir:'desc'});
+        else state.push({ci,dir:'asc'});
+      }
+      // Update th classes
+      ths.forEach((h,i)=>{ h.classList.remove('asc','desc'); const s=state.find(x=>x.ci===i); if(s) h.classList.add(s.dir); });
+      sortTableBody(tbl, state);
+      if(sortBarId) updateSortBar(sortBarId, state, ths, tableId);
+    };
+  });
+  if(sortBarId) updateSortBar(sortBarId, state, ths, tableId);
+}
+
+function sortTableBody(tbl, state){
+  const tbody = tbl.querySelector('tbody');
+  if(!tbody) return;
+  const rows = [...tbody.querySelectorAll('tr:not(.total)')];
+  const totalRow = tbody.querySelector('tr.total');
+  if(!state.length){ tbody.appendChild(totalRow); return; }
+  rows.sort((a,b)=>{
+    for(const s of state){
+      const ta=a.cells[s.ci], tb=b.cells[s.ci];
+      if(!ta||!tb) continue;
+      const va=ta.dataset.val!==undefined?parseFloat(ta.dataset.val)||0:parseFloat(ta.textContent.replace(/[^0-9.\-]/g,''))||ta.textContent.trim();
+      const vb=tb.dataset.val!==undefined?parseFloat(tb.dataset.val)||0:parseFloat(tb.textContent.replace(/[^0-9.\-]/g,''))||tb.textContent.trim();
+      const cmp=typeof va==='string'?va.localeCompare(vb):va-vb;
+      if(cmp!==0) return s.dir==='asc'?cmp:-cmp;
+    }
+    return 0;
+  });
+  rows.forEach(r=>tbody.appendChild(r));
+  if(totalRow) tbody.appendChild(totalRow);
+}
+
+function updateSortBar(barId, state, ths, tableId){
+  const bar = document.getElementById(barId);
+  if(!bar) return;
+  if(!state.length){
+    bar.innerHTML='<span style="font-size:10px;color:var(--mut)">Click column header to sort · Shift+click to add secondary sort</span>';
+    return;
+  }
+  bar.innerHTML = '<span style="font-size:10px;color:var(--mut)">Sorted by:</span> '
+    + state.map((s,i)=>{
+        const th=ths[s.ci]; const lbl=th?th.textContent.replace(/[⇅▲▼\d]/g,'').trim():`Col ${s.ci}`;
+        return `<span class="sort-chip">${i+1}. ${lbl}
+          <span class="dir" onclick="(function(){window._tblSort['${tableId}'][${i}].dir=window._tblSort['${tableId}'][${i}].dir==='asc'?'desc':'asc';sortTableBody(document.getElementById('${tableId}'),window._tblSort['${tableId}']);updateSortBar('${barId}',window._tblSort['${tableId}'],document.getElementById('${tableId}').querySelectorAll('thead th'),'${tableId}');})()">${s.dir==='asc'?'▲':'▼'}</span>
+          <span class="rm" onclick="(function(){window._tblSort['${tableId}'].splice(${i},1);sortTableBody(document.getElementById('${tableId}'),window._tblSort['${tableId}']);updateSortBar('${barId}',window._tblSort['${tableId}'],document.getElementById('${tableId}').querySelectorAll('thead th'),'${tableId}');})()">✕</span>
+        </span>`;
+      }).join('')
+    + ` <button class="btn" style="font-size:10px;padding:1px 7px" onclick="(function(){window._tblSort['${tableId}']=[];sortTableBody(document.getElementById('${tableId}'),([]));updateSortBar('${barId}',[],document.getElementById('${tableId}').querySelectorAll('thead th'),'${tableId}');})()">Clear</button>`;
+}
+
+// Attach sort to a table after it's rendered, with an optional dedicated sort bar
+function attachSort(tableId, barId){
+  const tbl=document.getElementById(tableId);
+  if(!tbl) return;
+  makeTableSortable(tableId, barId||null);
+}
+
+
+// ═══════════════════════════════════
+// PUBLISH TO ALL — bake data into HTML and download
+// ═══════════════════════════════════
+
+function showPublishModal(){
+  if(AUTH.role!=='admin'){ toast('Only Admin can publish','err'); return; }
+  const hasData = DS.dmt.length || DS.ib.length || DS.gcp.length;
+  if(!hasData){ toast('Upload at least one CSV file before publishing','err'); return; }
+
+  // Restore saved GitHub settings
+  const saved = JSON.parse(localStorage.getItem('gh_config')||'{}');
+  if(saved.user)  document.getElementById('gh-user').value  = saved.user;
+  if(saved.repo)  document.getElementById('gh-repo').value  = saved.repo;
+  if(saved.token) document.getElementById('gh-token').value = saved.token;
+
+  // Data summary
+  document.getElementById('pub-summary').innerHTML=`
+    <div class="pub-ds ${DS.dmt.length?'ok':'warn'}">
+      <div class="pub-dk">DMT</div>
+      <div class="pub-dv">${DS.dmt.length?DS.dmt.length.toLocaleString()+' rows':'Not loaded'}</div>
+    </div>
+    <div class="pub-ds ${DS.ib.length?'ok':'warn'}">
+      <div class="pub-dk">Inbound Cap</div>
+      <div class="pub-dv">${DS.ib.length?DS.ib.length.toLocaleString()+' rows':'Not loaded'}</div>
+    </div>
+    <div class="pub-ds ${DS.gcp.length?'ok':'warn'}">
+      <div class="pub-dk">GCP</div>
+      <div class="pub-dv">${DS.gcp.length?DS.gcp.length.toLocaleString()+' rows':'Not loaded'}</div>
+    </div>`;
+
+  setPubStatus('','');
+  document.getElementById('pub-dl-btn').textContent='\uD83D\uDE80 Push to GitHub';
+  document.getElementById('pub-dl-btn').disabled=false;
+  document.getElementById('pub-modal').classList.add('show');
+}
+
+function closePubModal(e){
+  if(e && e.target!==document.getElementById('pub-modal')) return;
+  document.getElementById('pub-modal').classList.remove('show');
+}
+
+function setPubStatus(msg, type){
+  const el=document.getElementById('pub-status');
+  if(!msg){ el.style.display='none'; el.textContent=''; return; }
+  el.style.display='block';
+  el.className='pub-status-'+type;
+  el.innerHTML=msg;
+}
+
+async function doPublish(){
+  const ghUser  = (document.getElementById('gh-user').value||'').trim();
+  const ghRepo  = (document.getElementById('gh-repo').value||'').trim();
+  const ghToken = (document.getElementById('gh-token').value||'').trim();
+
+  if(!ghUser||!ghRepo||!ghToken){
+    setPubStatus('⚠ Please fill in GitHub username, repository name, and token.','err');
+    return;
+  }
+  if(document.getElementById('gh-save').checked){
+    localStorage.setItem('gh_config', JSON.stringify({user:ghUser,repo:ghRepo,token:ghToken}));
+  }
+
+  const btn=document.getElementById('pub-dl-btn');
+  btn.textContent='⏳ Aggregating data…'; btn.disabled=true;
+  setPubStatus('Pre-computing aggregated data (this is fast)…','info');
+
+  // Small delay so UI updates
+  await new Promise(r=>setTimeout(r,60));
+
+  try{
+    // ── Step 1: Pre-aggregate all data (stores ~8MB instead of ~230MB) ──
+    // Process in yielding chunks so UI stays responsive
+    setPubStatus('Step 1/3 — Aggregating data (processing '+DS.gcp.length.toLocaleString()+' GCP rows)…','info');
+    await new Promise(r=>setTimeout(r,60));
+    const agg = buildAggregatedPayload();
+    setPubStatus('Step 1/3 — Done ✓ ('+agg.rv.length.toLocaleString()+' FC-date rows, '+agg.tokens.length.toLocaleString()+' trucks)','info');
+
+    btn.textContent='⏳ Building HTML…';
+    setPubStatus('Step 2/3 — Building HTML file…','info');
+    await new Promise(r=>setTimeout(r,40));
+
+    // ── Step 2: Build the new HTML with aggregated data embedded ──
+    const TAG_O = '<scr'+'ipt id="__published_data__">';
+    const TAG_C = '</sc'+'ript>';
+    const dataScript = TAG_O + '\n(function(){\n  window.__PUBLISHED_DATA__=' + JSON.stringify(agg) + ';\n})();\n' + TAG_C;
+
+    // Reset modal state BEFORE capturing outerHTML - prevents modal being baked into published HTML
+    document.getElementById('pub-modal').classList.remove('show');
+    document.getElementById('pub-dl-btn').textContent = 'Push to GitHub';
+    document.getElementById('pub-dl-btn').disabled = false;
+    await new Promise(r => setTimeout(r, 50));
+
+    let htmlSrc = document.documentElement.outerHTML;
+    // Remove any existing published data block
+    const si = htmlSrc.indexOf('<scr'+'ipt id="__published_data__">');
+    if(si>-1){const ei=htmlSrc.indexOf(TAG_C,si);if(ei>-1)htmlSrc=htmlSrc.slice(0,si)+htmlSrc.slice(ei+TAG_C.length);}
+    const finalHtml = htmlSrc.replace('<'+'/body>', dataScript+'\n<'+'/body>');
+
+    btn.textContent='⏳ Connecting to GitHub…';
+    setPubStatus('Connecting to GitHub API…','info');
+
+    // ── Step 3: Get current file SHA ──
+    const apiBase = 'https://api.github.com/repos/'+ghUser+'/'+ghRepo+'/contents/index.html';
+    const headers = {'Authorization':'token '+ghToken,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'};
+
+    let sha=null;
+    const getResp = await fetch(apiBase,{headers});
+    if(getResp.status===200){sha=(await getResp.json()).sha;}
+    else if(getResp.status!==404){const j=await getResp.json();throw new Error('GitHub error: '+getResp.status+' — '+(j.message||'unknown'));}
+
+    btn.textContent='⏳ Pushing to GitHub…';
+    setPubStatus('Step 3/3 — Uploading to GitHub ('+Math.round(finalHtml.length/1024)+'KB)…','info');
+
+    // ── Step 4: Base64 encode safely (handle unicode) ──
+    const encoded = btoa(unescape(encodeURIComponent(finalHtml)));
+
+    // ── Step 5: Push to GitHub ──
+    const now = new Date().toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    const putResp = await fetch(apiBase,{method:'PUT',headers,body:JSON.stringify({
+      message:'Dashboard data update — '+now,
+      content:encoded,
+      ...(sha?{sha}:{})
+    })});
+    const putJson = await putResp.json();
+
+    if(putResp.status===200||putResp.status===201){
+      btn.textContent='✅ Published!'; btn.disabled=false;
+      setPubStatus('✅ <strong>Successfully published!</strong><br>GitHub Pages will update in ~2 minutes.<br>All viewers will see the new data when they refresh.<br><span style="font-size:10px;opacity:.7">Committed: '+now+'</span>','ok');
+      toast('✅ Dashboard published! Viewers see new data in ~2 mins.');
+      setTimeout(()=>{btn.textContent='🚀 Push to GitHub';document.getElementById('pub-modal').classList.remove('show');},4000);
+    } else {
+      throw new Error(putJson.message||'Push failed — status '+putResp.status);
+    }
+
+  } catch(err){
+    btn.textContent='🚀 Push to GitHub'; btn.disabled=false;
+    let msg=err.message||'Unknown error';
+    if(msg.includes('Bad credentials')) msg='Invalid token — check your GitHub Personal Access Token.';
+    if(msg.includes('Not Found'))       msg='Repo not found — check username and repository name.';
+    if(msg.includes('fetch'))           msg='Network error — check your internet connection.';
+    if(msg.includes('string length'))   msg='Data still too large. Try uploading fewer date ranges.';
+    setPubStatus('⛔ '+msg,'err');
+    toast('Publish failed: '+msg,'err');
+  }
+}
+
+// ── Pre-aggregate DS data into compact summary tables ──
+// Reduces payload from ~230MB to ~8MB
+function buildAggregatedPayload(){
+  const dmt=DS.dmt, ib=DS.ib, gcp=DS.gcp;
+  const pf=v=>parseFloat(v)||0;
+
+  // Fast date extractor — handles "YYYY-MM-DD HH:MM:SS" and "YYYY-MM-DD" directly
+  // Avoids full parseDate() call on every row (470K rows × 2 = 940K calls saved)
+  const fastDate=v=>{
+    if(!v||v==='NaT'||v==='') return null;
+    const s=String(v).trim();
+    if(s.length>=10 && s[4]==='-') return s.slice(0,10);  // ISO format fast path
+    const d=parseDate(v); return d?fd(d):null;
+  };
+
+  // Pre-build fcName cache for all warehouse_ids in GCP (avoids 940K fcName() calls)
+  const fcCache={};
+  const getFCName=raw=>{
+    if(raw in fcCache) return fcCache[raw];
+    return (fcCache[raw]=fcName(raw));
+  };
+
+  // ── RV aggregate object ──
+  const rv={};
+  const mk=k=>{if(!rv[k])rv[k]={fc:'',d:'',code:'',capT:0,capPL:0,capSelf:0,schT:0,schPL:0,schSelf:0,schCons:0,repT:0,repPL:0,repSelf:0,repCons:0,ulT:0,ulPL:0,ulSelf:0,ulCons:0,grnT:0,grnPL:0,grnSelf:0,grnCons:0,holdT:0,holdCons:0,rejT:0,rejCons:0};};
+
+  // ── IB (13K rows — fast) ──
+  const ibRows=[];
+  const n=v=>parseFloat(String(v||0).replace(/,/g,''))||0;
+  ib.filter(r=>r.Zone!=='FALSE').forEach(r=>{
+    const fc=getFCName(r.FC); if(!fc)return;
+    const d=fastDate(r.Date); if(!d)return;
+    const k=fc+'|'+d; mk(k);
+    rv[k].fc=fc; rv[k].d=d; rv[k].code=r.FC||'';
+    rv[k].capT+=n(r['MPFBF Total']); rv[k].capPL+=n(r['MPFBF PL Final Cap']); rv[k].capSelf+=n(r['MPFBF Self Caps']);
+    ibRows.push({d,fc,code:r.FC||'',zone:r.Zone||'',capT:n(r['MPFBF Total']),capPL:n(r['MPFBF PL Final Cap']),capSelf:n(r['MPFBF Self Caps'])});
+  });
+
+  // ── GCP single pass (470K rows — do everything in one loop) ──
+  const DROP_COL='scheduled_drop_date[latest_scheduled_date]';
+  gcp.forEach(r=>{
+    const fc=getFCName(r.warehouse_id); if(!fc)return;
+    const isPL=(r.dispatch_type==='PICK_UP');
+
+    // Scheduling by drop_date
+    const dd=fastDate(r[DROP_COL]);
+    if(dd){
+      const k=fc+'|'+dd; mk(k);
+      rv[k].fc=fc; rv[k].d=dd;
+      const q=pf(r.Promised_quantity);
+      rv[k].schT+=q; rv[k].schCons++;
+      if(isPL)rv[k].schPL+=q; else rv[k].schSelf+=q;
+    }
+
+    // GRN by received_date
+    const rd=fastDate(r.received_date);
+    if(rd){
+      const k=fc+'|'+rd; mk(k);
+      rv[k].fc=fc; rv[k].d=rd;
+      const qa=pf(r.actual_quantity);
+      rv[k].grnT+=qa; if(qa>0)rv[k].grnCons++;
+      if(isPL)rv[k].grnPL+=qa; else rv[k].grnSelf+=qa;
+    }
+  });
+
+  // ── DMT single pass (100K MPFBF rows) ──
+  const tokMap={};
+  const rejMap={};
+  const crMap={};
+
+  dmt.forEach(r=>{
+    if(r.sname!=='MPFBF')return;
+    const fc=getFCName(r.facility_name); if(!fc)return;
+    const d=fastDate(r.token_date); if(!d)return;
+    const k=fc+'|'+d; mk(k);
+    rv[k].fc=fc; rv[k].d=d;
+    const iq=pf(r.invoiceqty), aq=pf(r.actualqty);
+    const ps=DT_TO_PS[r.delivery_type]||'Other';
+    rv[k].repT+=iq; rv[k].repCons++;
+    if(ps==='PL')rv[k].repPL+=iq; else if(ps==='Self')rv[k].repSelf+=iq;
+    rv[k].ulT+=aq; rv[k].ulCons++;
+    if(ps==='PL')rv[k].ulPL+=aq; else if(ps==='Self')rv[k].ulSelf+=aq;
+    const ns=normStatus(r.cstatus);
+    if(r.hold_reason&&r.hold_reason!=='nan'){rv[k].holdT+=aq;rv[k].holdCons++;}
+    if(ns==='Reject'){rv[k].rejT+=aq;rv[k].rejCons++;}
+
+    // Token table (for deep dive)
+    const tk=r.token_no||'?';
+    const tkey=tk+'|'+fc+'|'+d;
+    if(!tokMap[tkey])tokMap[tkey]={tk,fc,d,veh:(r.vehicle_type||'').trim(),vno:(r.veh_reg_no||'').trim(),gi:r.gate_in_time,di:r.dock_in_time,do_:r.dock_out_time,go:r.gate_out_time,wk:d?weekLabel(parseDate(r.token_date)):'',invQty:0,actQty:0,cons:0,ap:0,rj:0,hd:0,cr:(r.courier_name||'').trim(),dt:r.delivery_type||'',cat:(r.ippname||'').trim()};
+    const t=tokMap[tkey];
+    t.invQty+=iq; t.actQty+=aq; t.cons++;
+    if(ns==='Approve')t.ap++;else if(ns==='Reject')t.rj++;else if(ns==='Hold')t.hd++;
+
+    // Rejection reasons
+    if(ns==='Reject'){
+      const reason=(r.creason||'(blank)').trim();
+      const rk=fc+'|'+d+'|'+reason;
+      if(!rejMap[rk])rejMap[rk]={fc,d,reason,cnt:0,qty:0};
+      rejMap[rk].cnt++;rejMap[rk].qty+=aq;
+    }
+
+    // Courier summary
+    const cr=(r.courier_name||'?').trim();
+    const ck=fc+'|'+d+'|'+cr;
+    if(!crMap[ck])crMap[ck]={fc,d,cr,qty:0,ap:0,rj:0,invQty:0};
+    crMap[ck].qty+=aq; crMap[ck].invQty+=iq;
+    if(ns==='Approve')crMap[ck].ap++;else if(ns==='Reject')crMap[ck].rj++;
+  });
+
+  return {
+    rv:Object.values(rv),
+    tokens:Object.values(tokMap),
+    ib:ibRows,
+    rejReasons:Object.values(rejMap),
+    couriers:Object.values(crMap),
+    publishedAt:new Date().toISOString(),
+    publishedBy:'admin'
+  };
+}
+
+
+
+// Auto-load published data on startup (for viewers)
+function loadPublishedData(){
+  const pd = window.__PUBLISHED_DATA__;
+  if(!pd) return;
+  // Restore pre-aggregated data into DS-compatible structures for rendering
+  // We store agg results directly; render functions check for DS._agg flag
+  if(pd.rv && pd.rv.length){
+    DS._agg = pd;  // mark as aggregated
+    // Populate dummy DS arrays so filter dropdowns work
+    if(pd.ib && pd.ib.length){
+      DS.ib = pd.ib.map(r=>({'Date':r.d,'Zone':r.zone,'FC':r.code,'MPFBF Total':r.capT,'MPFBF PL Final Cap':r.capPL,'MPFBF Self Caps':r.capSelf}));
+    }
+    if(pd.tokens && pd.tokens.length){
+      // Reconstruct minimal DMT rows from token table so FC dropdown populates
+      DS.dmt = pd.tokens.map(r=>({sname:'MPFBF',facility_name:r.fc,token_no:r.tk,token_date:r.d,vehicle_type:r.veh,veh_reg_no:r.vno,gate_in_time:r.gi,dock_in_time:r.di,dock_out_time:r.do_,gate_out_time:r.go,delivery_type:r.dt,courier_name:r.cr,ippname:r.cat,actualqty:r.actQty,invoiceqty:r.invQty,cstatus:'Approved',hold_reason:null}));
+    }
+    // Mark chips as published
+    markChipPublished('dmt', pd.tokens?pd.tokens.length:0);
+    markChipPublished('ib',  pd.ib?pd.ib.length:0);
+    markChipPublished('gcp', pd.rv?pd.rv.length:0);  // shows FC-date agg rows
+    const dt = pd.publishedAt ? new Date(pd.publishedAt).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+    document.getElementById('upd').textContent = 'Data published '+dt;
+    buildOpts();
+    go();
+  }
+}
+
+function markChipPublished(key, count){
+  const chip=document.getElementById('chip-'+key);
+  chip.className='chip ok';
+  document.getElementById('lbl-'+key).textContent=
+    LABELS[key].replace('.csv','')+' \u2713 ('+count.toLocaleString()+')';
+}
+
+// ═══════════════════════════════════
+// INIT
+// ═══════════════════════════════════
+// ═══════════════════════════════════
+// LOCAL STORAGE PERSISTENCE
+// Saves aggregated data so it survives page refresh
+// Raw CSVs are too large (~230MB); we save the ~8MB aggregated payload instead
+// ═══════════════════════════════════
+function saveAggToStorage(){
+  // Only save if we have at least one data source loaded
+  if(!DS.dmt.length && !DS.ib.length && !DS.gcp.length) return;
+  try{
+    const agg = buildAggregatedPayload();
+    // Save aggregated payload
+    localStorage.setItem('mpfbf_agg', JSON.stringify(agg));
+    // Save chip labels so we can restore the "filename ✓ (rows)" display
+    const labels = {
+      dmt: document.getElementById('lbl-dmt').textContent,
+      ib:  document.getElementById('lbl-ib').textContent,
+      gcp: document.getElementById('lbl-gcp').textContent,
+    };
+    localStorage.setItem('mpfbf_agg_labels', JSON.stringify(labels));
+    console.log('Data saved to localStorage (~'+ Math.round(JSON.stringify(agg).length/1024)+'KB)');
+  } catch(e){
+    console.warn('Could not save to localStorage:', e.message);
+    // localStorage might be full — clear old data and try once more
+    try{ localStorage.clear(); localStorage.setItem('mpfbf_agg', JSON.stringify(buildAggregatedPayload())); }catch(e2){}
+  }
+}
+
+function loadAggFromStorage(){
+  // Skip if published data already loaded (published data takes priority)
+  if(window.__PUBLISHED_DATA__) return;
+  try{
+    const raw = localStorage.getItem('mpfbf_agg');
+    if(!raw) return;
+    const agg = JSON.parse(raw);
+    if(!agg || !agg.rv || !agg.rv.length) return;
+
+    // Restore DS._agg (same as loadPublishedData does)
+    DS._agg = agg;
+    if(agg.ib && agg.ib.length){
+      DS.ib = agg.ib.map(r=>({'Date':r.d,'Zone':r.zone,'FC':r.code,'MPFBF Total':r.capT,'MPFBF PL Final Cap':r.capPL,'MPFBF Self Caps':r.capSelf}));
+    }
+    if(agg.tokens && agg.tokens.length){
+      DS.dmt = agg.tokens.map(r=>({sname:'MPFBF',facility_name:r.fc,token_no:r.tk,token_date:r.d,vehicle_type:r.veh,veh_reg_no:r.vno,gate_in_time:r.gi,dock_in_time:r.di,dock_out_time:r.do_,gate_out_time:r.go,delivery_type:r.dt,courier_name:r.cr,ippname:r.cat,actualqty:r.actQty,invoiceqty:r.invQty,cstatus:'Approved',hold_reason:null}));
+    }
+    // Restore chip labels
+    try{
+      const labels = JSON.parse(localStorage.getItem('mpfbf_agg_labels')||'{}');
+      if(labels.dmt){ document.getElementById('chip-dmt').className='chip ok'; document.getElementById('lbl-dmt').textContent=labels.dmt; }
+      if(labels.ib){  document.getElementById('chip-ib').className='chip ok';  document.getElementById('lbl-ib').textContent=labels.ib;   }
+      if(labels.gcp){ document.getElementById('chip-gcp').className='chip ok'; document.getElementById('lbl-gcp').textContent=labels.gcp; }
+    }catch(e){}
+
+    const dt = agg.publishedAt ? new Date(agg.publishedAt).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : 'previously';
+    document.getElementById('upd').textContent = 'Data from ' + dt + ' (cached)';
+    buildOpts();
+    go();
+    toast('Data restored from last session');
+  } catch(e){
+    console.warn('Could not load from localStorage:', e.message);
+    try{ localStorage.removeItem('mpfbf_agg'); }catch(e2){}
+  }
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  const to=new Date(); document.getElementById('ft').value=to.toISOString().slice(0,10);
+  const fr=new Date(); fr.setDate(fr.getDate()-45); document.getElementById('ff').value=fr.toISOString().slice(0,10);
+
+  // Load published data if present (priority 1)
+  loadPublishedData();
+  // If no published data, restore from localStorage (priority 2)
+  if(!DS._agg) loadAggFromStorage();
+});
+</script>
+</body>
+</html>
